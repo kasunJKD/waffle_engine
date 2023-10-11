@@ -1,7 +1,7 @@
 #!/bin/bash
 
 warnings="-Wno-writable-strings -Wno-format-security -Wno-deprecated-declarations -Wno-switch"
-includes="-Ithird_party -Ithird_party/Include"
+includes="-Ivendors -Ivendors/Include"
 
 # Replace Windows-specific libraries with their Linux equivalents
 libs="-lX11 -lGL -lGLU"
