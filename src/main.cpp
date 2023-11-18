@@ -51,6 +51,17 @@ static bool isExtensionSupported(const char *extList, const char *extension) {
 	return false;
 }
 
+// camera
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
+
+
+
 int main()
 {
 	static auto startTime = std::chrono::high_resolution_clock::now();
@@ -386,6 +397,8 @@ int main()
 
     int quit = 0;
     while(!quit) {
+		//engine camera speed
+		float cameraSpeed = static_cast<float>(2.5 * deltaTime);
 		if (XPending(display) > 0) {
        XNextEvent(display, &ev);
 		switch(ev.type) {
@@ -397,10 +410,22 @@ int main()
                 XRefreshKeyboardMapping(&ev.xmapping);
             break;
             case KeyPress:
-                len = XLookupString(&ev.xkey, str, 25, &keysym, NULL);
-                if (len > 0) {
-                    std::cout << "Key pressed: " << str << " - " << len << " - " << keysym <<'\n';
-                }
+		if (keysym == XK_W || keysym == XK_w)
+		{
+			cameraPos += cameraSpeed * cameraFront;	
+		}
+		else if (keysym == XK_S || keysym == XK_s)
+		{
+			cameraPos -= cameraSpeed * cameraFront;
+		}
+		else if (keysym == XK_A || keysym == XK_a)
+		{
+			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+		else if (keysym == XK_D || keysym == XK_d)
+		{
+			cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
                 if (keysym == XK_Escape) {
                     quit = 1;
                 }
@@ -427,7 +452,7 @@ int main()
 				else if (ev.xbutton.button == 5) {
 					std::cout << "Mouse scroll down\n";
 				}
-			break;
+							break;
 			case ButtonRelease:
 				if (ev.xbutton.button == 1) {
 					std::cout << "Left mouse up\n";
@@ -469,24 +494,26 @@ int main()
 
 		// draw our first triangle
         glUseProgram(shaderProgram);
+
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)800 / (float)600, 0.1f, 100.0f);
+	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, &projection[0][0]);
+		// camera/view transformation
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        unsigned int viewLoc  = glGetUniformLocation(shaderProgram, "view");
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+
         // create transformations
         glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-        glm::mat4 view          = glm::mat4(1.0f);
-        glm::mat4 projection    = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3( 0.0f,  0.0f,  0.0f));
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float timeInSeconds = std::chrono::duration<float>(currentTime - startTime).count();
+		deltaTime = timeInSeconds - lastFrame;
+        lastFrame = timeInSeconds;
         model = glm::rotate(model, timeInSeconds, glm::vec3(0.5f, 1.0f, 0.0f));
-        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        projection = glm::perspective(glm::radians(45.0f), (float)800 / (float)600, 0.1f, 100.0f);
         // retrieve the matrix uniform locations
         unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
-        unsigned int viewLoc  = glGetUniformLocation(shaderProgram, "view");
         // pass them to the shaders (3 different ways)
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
-        // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, &projection[0][0]);
-    
 
         // render box
         glBindVertexArray(VAO);
