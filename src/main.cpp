@@ -60,6 +60,12 @@ glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
+bool firstMouse = true;
+float yaw   = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+float pitch =  0.0f;
+float lastX =  800.0f / 2.0;
+float lastY =  600.0 / 2.0;
+float fov   =  45.0f;
 
 
 int main()
@@ -464,10 +470,42 @@ int main()
 					std::cout << "Right mouse up\n";
 				}
 			break;
-			case MotionNotify:
+			case MotionNotify:{
 				x = ev.xmotion.x;
 				y = ev.xmotion.y;
-				std::cout << "Mouse X:" << x << ", Y: " << y << "\n";
+				float xpos = static_cast<float>(x);
+    			float ypos = static_cast<float>(y);
+
+				if (firstMouse)
+				{
+					lastX = xpos;
+					lastY = ypos;
+					firstMouse = false;
+				}
+
+				float xoffset = xpos - lastX;
+				float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+				lastX = xpos;
+				lastY = ypos;
+
+				float sensitivity = 0.1f; // change this value to your liking
+				xoffset *= sensitivity;
+				yoffset *= sensitivity;
+
+				yaw += xoffset;
+				pitch += yoffset;
+
+				// make sure that when pitch is out of bounds, screen doesn't get flipped
+				if (pitch > 89.0f)
+					pitch = 89.0f;
+				if (pitch < -89.0f)
+					pitch = -89.0f;
+
+				glm::vec3 front;
+				front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+				front.y = sin(glm::radians(pitch));
+				front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+				cameraFront = glm::normalize(front);}
 			break;
 			case EnterNotify:
 				std::cout << "Mouse enter\n";
@@ -495,7 +533,7 @@ int main()
 		// draw our first triangle
         glUseProgram(shaderProgram);
 
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)800 / (float)600, 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)800 / (float)600, 0.1f, 100.0f);
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, &projection[0][0]);
 		// camera/view transformation
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
