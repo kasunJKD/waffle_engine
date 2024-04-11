@@ -7,4 +7,4 @@ includes="-Ivendors/include -Ivendors/include/glad/include -Ivendors"
 libs="-luser32 -lopengl32 -lvendors/lib/SDL2/SDL2 -lvendors/lib/SDL2/SDL2main"
 
 # Build the executable for Linux
-clang++ $includes -g src/main.cpp vendors/include/glad/src/glad.c -o game.exe $libs
+clang -x c++ $includes -g src/main.cpp vendors/include/glad/src/glad.c -o game.exe $libs

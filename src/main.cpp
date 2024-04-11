@@ -59,7 +59,56 @@ int main (int argc, char* argv[])
    glLinkProgram(shading_program);
 
    glReleaseShaderCompiler();
-   glUseProgram(shading_program);
+
+     // Check for linking errors
+    GLint success;
+    GLchar infoLog[512];
+    glGetProgramiv(shading_program, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(shading_program, 512, NULL, infoLog);
+        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+    }
+
+   // glDeleteShader(vertexShader);
+    //glDeleteShader(fragmentShader);
+
+    // Vertex input data
+    float vertices[] = {
+        // Positions      // TexCoords
+        -1.0f,  1.0f,     0.0f, 1.0f, // Top Left
+         1.0f,  1.0f,     1.0f, 1.0f, // Top Right
+         1.0f, -1.0f,     1.0f, 0.0f, // Bottom Right
+        -1.0f, -1.0f,     0.0f, 0.0f  // Bottom Left
+    };
+    unsigned int indices[] = {  
+        0, 1, 2,   // First Triangle
+        2, 3, 0    // Second Triangle
+    };
+
+    GLuint VAO, VBO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // Texture coordinate attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    // Unbind VAO
+    glBindVertexArray(0);
+
+
     
   
   b32 Running = 1;
@@ -101,6 +150,11 @@ int main (int argc, char* argv[])
     glViewport(0, 0, WinWidth, WinHeight);
     glClearColor(1.f, 0.f, 1.f, 0.f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(shading_program);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
 
     SDL_GL_SwapWindow(Window);
   }
