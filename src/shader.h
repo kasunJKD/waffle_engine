@@ -19,6 +19,8 @@ public:
     shader(const char* vertexSrc, const char* fragmentSrc);
     void bind();
     void unbind();
+
+    void setVec3(const char* uniformName,float v0, float v1, float v2);
 private:
     GLuint vertexShaderId;
     GLuint fragmentShaderId;

@@ -127,3 +127,12 @@ const char* shader::read_shader_file(const char* filename) {
 
     return buffer;
 }
+
+void shader::setVec3(const char* uniformName, float v0, float v1, float v2)
+{
+    unsigned int location = glGetUniformLocation(shaderProgramId, uniformName);
+    glUniform3f(location,v0,v1,v2);
+}
+
+
+
