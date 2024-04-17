@@ -14,6 +14,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "shader.h"
+
 using namespace std;
 
 typedef int32_t i32;
@@ -23,16 +25,7 @@ typedef uint32_t b32;
 #define WinWidth 1000
 #define WinHeight 1000
 
-GLuint shading_program;
-GLuint vertexShader;
-GLuint fragmentShader;
-
 #define GL_GREY .5, .5, .5, 1
-
-GLuint GetShader(GLenum, const char *);
-GLuint compile_shader(GLenum type, GLsizei, const char **);
-GLuint program_check(GLuint);
-const char * read_file(const char *);
 
 // camera
 glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -82,29 +75,7 @@ int main (int argc, char* argv[])
 
    glClearColor(GL_GREY);
 
-   vertexShader   = GetShader(GL_VERTEX_SHADER, "shaders/quad.vert");
-   fragmentShader = GetShader(GL_FRAGMENT_SHADER, "shaders/quad.frag");
-
-   shading_program = glCreateProgram();
-
-   glAttachShader(shading_program, vertexShader);
-   glAttachShader(shading_program, fragmentShader);
-
-   glLinkProgram(shading_program);
-
-   glReleaseShaderCompiler();
-
-     // Check for linking errors
-    GLint success;
-    GLchar infoLog[512];
-    glGetProgramiv(shading_program, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shading_program, 512, NULL, infoLog);
-        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-   // glDeleteShader(vertexShader);
-    //glDeleteShader(fragmentShader);
+   shader quadShader("shaders/quad.vert", "shaders/quad.frag");
 
     // Vertex input data
 float vertices[] = {
@@ -205,11 +176,6 @@ float vertices[] = {
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
     
-    std::cout << "Camera Position: (" 
-              << cameraPos.x << ", " 
-              << cameraPos.y << ", " 
-              << cameraPos.z << ")" << std::endl;
-    
     SDL_Event Event;
      while (SDL_PollEvent(&Event))
     {
@@ -219,8 +185,7 @@ float vertices[] = {
         }
         else if (Event.type == SDL_KEYDOWN)
         {
-                std::cout << "Key press detected: " << SDL_GetKeyName(Event.key.keysym.sym) << std::endl;
-                float cameraSpeed = static_cast<float>(5.0 * deltaTime);
+                float cameraSpeed = static_cast<float>(10.0 * deltaTime);
                 switch (Event.key.keysym.sym)
                 {                    
                     case SDLK_ESCAPE:
@@ -296,7 +261,7 @@ float vertices[] = {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(shading_program);
+    quadShader.bind();
 
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
@@ -305,13 +270,13 @@ float vertices[] = {
     glm::mat4 view  = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WinWidth/ (float)WinHeight, 0.1f, 100.0f);
     // retrieve the matrix uniform locations
-    unsigned int modelLoc = glGetUniformLocation(shading_program, "model");
-    unsigned int viewLoc  = glGetUniformLocation(shading_program, "view");
+    unsigned int modelLoc = glGetUniformLocation(quadShader.shaderProgramId, "model");
+    unsigned int viewLoc  = glGetUniformLocation(quadShader.shaderProgramId, "view");
     // pass them to the shaders (3 different ways)
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
-    glUniformMatrix4fv(glGetUniformLocation(shading_program, "projection"), 1, GL_FALSE, &projection[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(quadShader.shaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
 
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -319,11 +284,8 @@ float vertices[] = {
     SDL_GL_SwapWindow(Window);
   }
 
-  glDetachShader(shading_program, vertexShader);
-  glDetachShader(shading_program, fragmentShader);
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-  glDeleteProgram(shading_program);
+
+  quadShader.unbind();
 
   SDL_GL_DeleteContext(Context);
   SDL_DestroyWindow(Window);
@@ -331,89 +293,3 @@ float vertices[] = {
   return 0;
 }
 
-GLuint GetShader(GLenum eShaderType, const char *filename)
-{
-
-    const char *shaderSource=read_file(filename);
-    GLuint shader = compile_shader(eShaderType, 1, &shaderSource);
-    return shader;
-
-}
-
-GLuint compile_shader(GLenum type, GLsizei nsources, const char **sources)
-{
-
-    GLuint  shader;
-    GLint   success, len;
-    GLsizei i, srclens[nsources];
-
-    for (i = 0; i < nsources; ++i)
-        srclens[i] = (GLsizei)strlen(sources[i]);
-
-    shader = glCreateShader(type);
-    glShaderSource(shader, nsources, sources, srclens);
-    glCompileShader(shader);
-
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
-        if (len > 1) {
-            char *log;
-            log = (char *)malloc(len);
-            glGetShaderInfoLog(shader, len, NULL, log);
-            fprintf(stderr, "%s\n\n", log);
-            free(log);
-        }
-        SDL_Log("Error compiling shader.\n");
-    }
-    SDL_Log("shader: %u", shader);
-    return shader;
-}
-
-GLuint program_check(GLuint program)
-{
-    //Error Checking
-    GLint status;
-    glValidateProgram(program);
-    glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (!status) {
-        GLint len;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
-        if (len > 1) {
-            char *log;
-            log = (char *)malloc(len);
-            glGetProgramInfoLog(program, len, &len, log);
-            fprintf(stderr, "%s\n\n", log);
-            free(log);
-        }
-        SDL_Log("Error linking shader default program.\n");
-        return GL_FALSE;
-    }
-    return GL_TRUE;
-}
-
-const char* read_file(const char* filename) {
-    // Open the file in binary mode
-    ifstream file(filename, ios::binary);
-    if (!file.is_open()) {
-        cerr << "Could not open the file!" << endl;
-        return nullptr; // Return nullptr if file couldn't be opened
-    }
-
-    // Determine the file length
-    file.seekg(0, ios::end);
-    size_t length = file.tellg();
-    file.seekg(0, ios::beg);
-
-    // Allocate memory for file content
-    char* buffer = new char[length + 1]; // +1 for null terminator
-
-    // Read the file
-    file.read(buffer, length);
-    buffer[length] = '\0'; // Null-terminate the string
-
-    // Close the file
-    file.close();
-
-    return buffer;
-}
