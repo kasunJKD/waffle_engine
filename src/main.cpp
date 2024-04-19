@@ -3,6 +3,11 @@
 #include <assert.h>
 #include <iostream>
 #include <fstream>
+
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_opengl3.h"
+
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
@@ -15,6 +20,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.h"
+
 
 using namespace std;
 
@@ -180,6 +186,16 @@ int main (int argc, char* argv[])
     //}
     //stbi_image_free(data);
 
+    // Setup Dear ImGui context
+IMGUI_CHECKVERSION();
+ImGui::CreateContext();
+ImGuiIO& io = ImGui::GetIO();
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+// Setup Platform/Renderer backends
+ImGui_ImplSDL2_InitForOpenGL(Window, Context);
+ImGui_ImplOpenGL3_Init();
 
     
   
@@ -194,6 +210,8 @@ int main (int argc, char* argv[])
     SDL_Event Event;
      while (SDL_PollEvent(&Event))
     {
+        ImGui_ImplSDL2_ProcessEvent(&Event);
+
         if(Event.type == SDL_QUIT)
         {
                 Running = false;
@@ -272,6 +290,11 @@ int main (int argc, char* argv[])
         }
     }
 
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow();
+
     glViewport(0, 0, WinWidth, WinHeight);
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -311,6 +334,9 @@ int main (int argc, char* argv[])
     glBindVertexArray(lightCubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
     SDL_GL_SwapWindow(Window);
   }
 
@@ -318,6 +344,9 @@ int main (int argc, char* argv[])
   lightCubeShader.unbind();
   lightingShader.unbind();
 
+  ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
   SDL_GL_DeleteContext(Context);
   SDL_DestroyWindow(Window);
   SDL_Quit();
