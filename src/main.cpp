@@ -1,8 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <assert.h>
-#include <iostream>
-#include <fstream>
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -303,6 +300,7 @@ ImGui_ImplOpenGL3_Init();
     lightingShader.setVec3("lightPos", lightPos[0], lightPos[1], lightPos[2]);
     lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
     lightingShader.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
+    lightingShader.setVec3("viewPos", cameraPos[0], cameraPos[1], cameraPos[2]);
 
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
