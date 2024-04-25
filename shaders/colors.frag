@@ -9,8 +9,52 @@ uniform vec3 objectColor;
 uniform vec3 lightColor;
 uniform vec3 viewPos;
 
+uniform mat4 invViewMatrix;
+uniform vec3 cubeCenter;
+uniform float cubeSize;
+
+float sdBox(vec3 p, vec3 b)
+{
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y, q.z)),0.0);
+}
+
+vec3 rayMarch(vec3 ro, vec3 rd, float start, float end, float step)
+{
+    float depth = start;
+    for (float i = start; i < end; i += step)
+    {
+	//what is rd 
+	vec3 pos = ro + rd * depth;
+	float d = sdBox(pos - cubeCenter, vec3(cubeSize));
+	if (d < 0.001) return pos;
+	depth += d;
+    }
+
+    return vec3(0.0);
+}
+
 void main()
-{    // ambient
+{   
+    vec3 ro = viewPos;
+    vec3 rd = normalize((invViewMatrix * vec4(FragPos, 0.0)).xyz);
+
+    vec3 hitPos = rayMarch(ro, rd, 0.1, 100.0, 0.1);
+
+    if (hitPos == vec3(0.0)) {
+	FragColor = vec4(0, 0, 0, 1);
+	return;
+    }
+
+    vec3 eps = vec3(0.001, 0.0, 0.0);
+
+    vec3 n = normalize(vec3(
+	sdBox(hitPos + eps.xyy, vec3(cubeSize)) - sdBox(hitPos - eps.xyy, vec3(cubeSize)),
+	sdBox(hitPos + eps.yxy, vec3(cubeSize)) - sdBox(hitPos - eps.yxy, vec3(cubeSize)),
+	sdBox(hitPos + eps.yyx, vec3(cubeSize)) - sdBox(hitPos - eps.yyx, vec3(cubeSize))
+    ));
+
+    // ambient
     float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * lightColor;
   	

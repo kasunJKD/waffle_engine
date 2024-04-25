@@ -9,6 +9,7 @@
 #include <glad/glad.h>
 
 
+
 using namespace std;
 
 struct shader {
@@ -21,6 +22,9 @@ public:
     void unbind();
 
     void setVec3(const char* uniformName,float v0, float v1, float v2);
+    void setVec4(const char* uniformName,float v0, float v1, float v2, float v3);
+    void setMat4(const char* uniformName, const float* value);
+    void setFloat(const char* uniformName,const float* value);
 private:
     GLuint vertexShaderId;
     GLuint fragmentShaderId;

@@ -133,6 +133,22 @@ void shader::setVec3(const char* uniformName, float v0, float v1, float v2)
     unsigned int location = glGetUniformLocation(shaderProgramId, uniformName);
     glUniform3f(location,v0,v1,v2);
 }
+void shader::setMat4(const char* uniformName, const float* value)
+{
+    unsigned int location = glGetUniformLocation(shaderProgramId, uniformName);
+    glUniformMatrix4fv(location,1,false, value);
+}
+void shader::setFloat(const char* uniformName,const float* value)
+{
+    unsigned int location = glGetUniformLocation(shaderProgramId, uniformName);
+    glUniform1fv(location,1, value);
+}
+
+void shader::setVec4(const char* uniformName,float v0, float v1, float v2, float v3)
+{
+    unsigned int location = glGetUniformLocation(shaderProgramId, uniformName);
+    glUniform4f(location,v0,v1, v2, v3);
+}
 
 
 

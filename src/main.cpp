@@ -49,6 +49,9 @@ float lastFrame = 0.0f;
 // lighting
 glm::vec3 lightPos(1.2f, 0.5f, 1.0f);
 
+glm::vec3 cubeCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+float cubeSize = 1.0f;
+
 int main (int argc, char* argv[])
 {
 
@@ -78,6 +81,7 @@ int main (int argc, char* argv[])
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 
    glClearColor(GL_GREY);
 
@@ -314,6 +318,11 @@ ImGui_ImplOpenGL3_Init();
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
+
+    glm::mat4 inverseview = glm::inverse(view); 
+    lightingShader.setMat4("invViewMatrix", &inverseview[0][0]);
+    lightingShader.setVec3("cubeCenter", cubeCenter[0], cubeCenter[1], cubeCenter[2]);
+    lightingShader.setFloat("cubeSize", &cubeSize);
 
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
