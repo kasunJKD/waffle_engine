@@ -1,6 +1,11 @@
+# Waffle Engine
+###### opengl based graphics engine implementing while I'm learning
 > [!NOTE]
 > main engine is in Inprogress.
 ---
+---
+---
+## Experiments 
 ### Simple Raymarching Techniques (experimental) <br>
 ###### check on branch [raymarching](https://github.com/kasunJKD/waffle_engine/tree/raymarching) 
 
