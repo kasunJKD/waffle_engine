@@ -1,5 +1,5 @@
 #include "shader.h"
-
+#include <iostream>
 
 
 shader::shader(const char* vertexSrc, const char* fragmentSrc)
@@ -49,30 +49,28 @@ GLuint shader::get_shader(GLenum eShaderType, const char* filename)
     return shader;
 }
 
-
 GLuint shader::compile_shader(GLenum type, GLsizei nsources, const char **sources)
 {
+    std::vector<GLsizei> srclens(nsources);
+    for (GLsizei i = 0; i < nsources; ++i) {
+        srclens[i] = static_cast<GLsizei>(strlen(sources[i]));
+    }
 
-    GLuint  shader;
-    GLint   success, len;
-    GLsizei i, srclens[nsources];
-
-    for (i = 0; i < nsources; ++i)
-        srclens[i] = (GLsizei)strlen(sources[i]);
-
-    shader = glCreateShader(type);
-    glShaderSource(shader, nsources, sources, srclens);
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, nsources, sources, srclens.data());
     glCompileShader(shader);
 
+    GLint success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
+        GLint len;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
         if (len > 1) {
-            char *log;
-            log = (char *)malloc(len);
-            glGetShaderInfoLog(shader, len, NULL, log);
-            fprintf(stderr, "%s\n\n", log);
-            free(log);
+            std::unique_ptr<char[]> log(new char[len]);
+            glGetShaderInfoLog(shader, len, nullptr, log.get());
+            std::cerr << "Error compiling shader: " << log.get() << std::endl;
+            glDeleteShader(shader); // Clean up shader if compilation fails
+            return 0; // Return 0 to indicate failure
         }
         SDL_Log("Error compiling shader.\n");
     }

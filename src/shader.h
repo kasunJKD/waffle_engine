@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
-#include <iostream>
 #include <fstream>
 
+#include <vector>
+#include <memory>
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
