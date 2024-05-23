@@ -1,3 +1,5 @@
+require("../export-compile-commands")
+
 workspace("MyGame")
 configurations({ "Debug", "Release" })
 platforms({ "x64" })

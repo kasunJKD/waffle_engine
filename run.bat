@@ -9,11 +9,18 @@ set PREMAKE5="C:\Users\user\Downloads\premake-5.0.0-beta2-windows\premake5.exe"
 :: Set the path to MSBuild (adjust according to your Visual Studio installation)
 set MSBUILD="C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
 
+:: Path to the output executable - adjust the path as needed
+set EXECUTABLE_PATH=bin\Debug\MyGame.exe
+
 :: Build the solution
 %MSBUILD% "build\MyGame.sln" /p:Configuration=Debug /p:Platform="x64"
 
 :: Check if the build was successful
 IF %ERRORLEVEL% NEQ 0 (
     echo Build failed with errors.
+) ELSE (
+    echo Build succeeded. Running the application...
+    start "" "%EXECUTABLE_PATH%"
 )
 
+pause
