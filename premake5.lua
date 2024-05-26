@@ -25,6 +25,9 @@ includedirs({
 files({
 	"src/main.cpp",
 	"src/shader.cpp",
+	"src/mesh.cpp",
+	"src/model.h",
+	"src/textureManager.h",
 	"vendors/include/glad/src/glad.c",
 	"imgui/imgui*.cpp",
 	"imgui/backends/imgui_impl_sdl2.cpp",
