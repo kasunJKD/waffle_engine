@@ -1,9 +1,11 @@
 #pragma once
 
+//#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <glad/glad.h>
 //#include "FreeImage.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+
 #include <vector>
 
 class TextureManager
@@ -157,4 +159,3 @@ protected:
 	std::vector<GLuint> m_texID;
 };
 
-TextureManager* TextureManager::m_inst = nullptr;

@@ -9,15 +9,12 @@
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 
-//#define STB_IMAGE_IMPLEMENTATION
-//#include <stb_image.h>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.h"
-
+#include "model.h"
 
 using namespace std;
 
@@ -34,6 +31,12 @@ typedef uint32_t b32;
 glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+
+glm::vec3 pointLightPositions[] =
+{
+	glm::vec3(2.3f, -1.6f, -3.0f),
+	glm::vec3(-1.7f, 0.9f, 1.0f)
+};
 
 bool firstMouse = true;
 float yaw   = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
@@ -78,83 +81,86 @@ int main (int argc, char* argv[])
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    
+    glViewport(0, 0, WinWidth, WinHeight);
 
-   glClearColor(GL_GREY);
-
-   shader lightingShader("shaders/colors.vert", "shaders/colors.frag");
-   shader lightCubeShader("shaders/light_cube.vert", "shaders/light_cube.frag");
+    shader lightingShader = shader("shaders/baselighting.vs", "shaders/baselighting.frag");
+	
+    Model ourModel = Model("assets/Nanosuit/nanosuit.obj");
+   //shader lightingShader("shaders/colors.vert", "shaders/colors.frag");
+   //shader lightCubeShader("shaders/light_cube.vert", "shaders/light_cube.frag");
 
     // Vertex input data
-    float vertices[] = {
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-    };
-
-    unsigned int VBO, cubeVAO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &VBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindVertexArray(cubeVAO);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-    unsigned int lightCubeVAO;
-    glGenVertexArrays(1, &lightCubeVAO);
-    glBindVertexArray(lightCubeVAO);
-
-    // we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    // float vertices[] = {
+    // -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    //  0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+    //  0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+    //  0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+    // -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+    // -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
+    //
+    // -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    //  0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    //  0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    //  0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    // -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    // -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    //
+    // -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    // -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    // -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    // -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    // -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    // -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    //
+    //  0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+    //  0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+    //  0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+    //  0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+    //  0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+    //  0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+    //
+    // -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+    //  0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+    //  0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    //  0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    // -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    // -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+    //
+    // -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+    //  0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+    //  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    //  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    // -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    // -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+    // };
+    //
+    // unsigned int VBO, cubeVAO;
+    // glGenVertexArrays(1, &cubeVAO);
+    // glGenBuffers(1, &VBO);
+    //
+    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    //
+    // glBindVertexArray(cubeVAO);
+    //
+    // // position attribute
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(0);
+    // // normal attribute
+    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    // glEnableVertexAttribArray(1);
+    //
+    // // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
+    // unsigned int lightCubeVAO;
+    // glGenVertexArrays(1, &lightCubeVAO);
+    // glBindVertexArray(lightCubeVAO);
+    //
+    // // we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
+    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    //
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(0);
     // load and create a texture 
     // -------------------------
     //unsigned int texture1; //texture2;
@@ -292,45 +298,42 @@ ImGui_ImplOpenGL3_Init();
     ImGui::NewFrame();
     ImGui::ShowDemoWindow();
 
-    glViewport(0, 0, WinWidth, WinHeight);
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-    lightingShader.bind();
-    lightingShader.setVec3("lightPos", lightPos[0], lightPos[1], lightPos[2]);
-    lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-    lightingShader.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
-    lightingShader.setVec3("viewPos", cameraPos[0], cameraPos[1], cameraPos[2]);
 
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
     glm::mat4 view  = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WinWidth/ (float)WinHeight, 0.1f, 100.0f);
-    // retrieve the matrix uniform locations
-    unsigned int modelLoc = glGetUniformLocation(lightingShader.shaderProgramId, "model");
-    unsigned int viewLoc  = glGetUniformLocation(lightingShader.shaderProgramId, "view");
-    // pass them to the shaders (3 different ways)
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
-    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
 
-    glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    lightingShader.bind();
+		
+    model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));	
 
-    lightCubeShader.bind();
-    glUniformMatrix4fv(glGetUniformLocation(lightCubeShader.shaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
-    unsigned int viewLoc2  = glGetUniformLocation(lightCubeShader.shaderProgramId, "view");
-    glUniformMatrix4fv(viewLoc2, 1, GL_FALSE, glm::value_ptr(view));
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, lightPos);
-    model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "view"), 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "model"), 1, GL_FALSE, glm::value_ptr(model));		
 
-    unsigned int modelLoc2 = glGetUniformLocation(lightCubeShader.shaderProgramId, "model");
-    glUniformMatrix4fv(modelLoc2, 1, GL_FALSE, glm::value_ptr(model));
-    
-    glBindVertexArray(lightCubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "viewPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].diffuse"), 1.0f, 1.0f, 1.0f);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].linear"), 0.009);
+    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].quadratic"), 0.0032);
+
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].position"), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].ambient"), 0.05f, 0.05f, 0.05f);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].diffuse"), 1.0f, 1.0f, 1.0f);
+    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].linear"), 0.009);
+    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].quadratic"), 0.0032);
+
+    ourModel.Draw(lightingShader);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -339,7 +342,6 @@ ImGui_ImplOpenGL3_Init();
   }
 
 
-  lightCubeShader.unbind();
   lightingShader.unbind();
 
   ImGui_ImplOpenGL3_Shutdown();

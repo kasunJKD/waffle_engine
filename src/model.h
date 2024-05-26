@@ -2,6 +2,7 @@
 #include <string>
 
 //#include <gl/glew.h>
+#include <windows.h>
 #include <glad/glad.h>
 
 #include <assimp/Importer.hpp>
@@ -22,7 +23,7 @@ public:
 		this->loadModel(path);
 	}
 
-	void Draw(Shader shader)
+	void Draw(shader shader)
 	{
 		for (GLuint i = 0; i < this->meshes.size(); i++)
 			this->meshes[i].Draw(shader);
@@ -103,7 +104,7 @@ private:
 			GLboolean skip = false;
 			for (GLuint j = 0; j < textures_loaded.size(); j++)
 			{
-				if (strcmp(textures_loaded[j].path.C_Str(), str.C_Str()) == 0)
+				if (strcmp(textures_loaded[j].path.c_str(), str.C_Str()) == 0)
 				{
 					textures.push_back(textures_loaded[j]);
 					skip = true;
@@ -115,10 +116,11 @@ private:
 				Texture texture;
 				texture.id = TextureFromFile(str.C_Str(), this->directory);
 				texture.type = typeName;
-				texture.path = str;
+				texture.path = str.C_Str();
 				textures.push_back(texture);
 				this->textures_loaded.push_back(texture);
 			}
+
 		}
 		return textures;
 	}

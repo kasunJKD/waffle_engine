@@ -1,5 +1,7 @@
 #include "mesh.h"
-#include "textureManager.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+TextureManager* TextureManager::m_inst = nullptr;
  
 Mesh::Mesh(
     vector<Vertex>vertices,

@@ -11,6 +11,8 @@
 
 #include "shader.h"
 
+#include "textureManager.h"
+
 using namespace std;
 
 struct Vertex
