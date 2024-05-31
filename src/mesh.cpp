@@ -20,7 +20,7 @@ void Mesh::Draw(shader shader)
 {
     GLuint diffuseNr = 1, specularNr = 1;
 
-    for (GLuint i = 0; i < this->textures.size(); ++i)
+    for (GLuint i = 0; i < this->textures.size(); i++)
     {
             glActiveTexture(GL_TEXTURE0 + i);
 

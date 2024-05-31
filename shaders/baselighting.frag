@@ -1,4 +1,4 @@
-#version 460 core
+#version 330 core
 #define NR_POINT_LIGHT 2
 
 struct Material
