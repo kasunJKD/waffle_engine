@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <vector>
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -15,20 +16,102 @@
 
 #include "shader.h"
 #include "model.h"
-
-using namespace std;
-
 typedef int32_t i32;
 typedef uint32_t u32;
 typedef uint32_t b32;
 
+using namespace std;
+
 #define WinWidth 1000
 #define WinHeight 1000
-
 #define GL_GREY .5, .5, .5, 1
 
+//GRID====================================
+struct Grid {
+    unsigned int width;
+    unsigned int depth;
+    shader* gridshade;
+    std::vector<float> gridVertices;
+    GLuint VAO, VBO;
+
+    Grid(unsigned int w, unsigned int d, shader* s)
+    {
+        this->width = w;
+        this->depth = d;
+        this->gridshade = s;
+    }
+
+    void Init()
+    {
+        // Clear previous data
+        gridVertices.clear();
+
+        // Generate vertices for vertical lines
+        for (unsigned int i = 0; i <= width; ++i) {
+            float x = static_cast<float>(i);
+            // Vertical line from (x, 0, 0) to (x, 0, depth)
+            gridVertices.push_back(x);
+            gridVertices.push_back(0.0f);
+            gridVertices.push_back(0.0f);
+            gridVertices.push_back(x);
+            gridVertices.push_back(0.0f);
+            gridVertices.push_back(static_cast<float>(depth));
+        }
+
+        // Generate vertices for horizontal lines
+        for (unsigned int j = 0; j <= depth; ++j) {
+            float z = static_cast<float>(j);
+            // Horizontal line from (0, 0, z) to (width, 0, z)
+            gridVertices.push_back(0.0f);
+            gridVertices.push_back(0.0f);
+            gridVertices.push_back(z);
+            gridVertices.push_back(static_cast<float>(width));
+            gridVertices.push_back(0.0f);
+            gridVertices.push_back(z);
+        }
+
+        // Setup buffers
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, gridVertices.size() * sizeof(float), gridVertices.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+   
+    void draw(const glm::mat4& view, const glm::mat4& projection)
+    {
+        // Bind VAO and draw the grid
+        // Use shader program
+        gridshade->bind();
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(-4.0f, -2.0f, -2.0f));
+        glm::mat4 MVP = projection * view * model;
+        glUniformMatrix4fv(glGetUniformLocation(gridshade->shaderProgramId, "MVP"), 1, GL_FALSE, glm::value_ptr(MVP));
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_LINES, 0, gridVertices.size() / 3);
+        glBindVertexArray(0);   
+    }
+
+     ~Grid()
+        {
+            // Cleanup OpenGL resources
+            glDeleteVertexArrays(1, &VAO);
+            glDeleteBuffers(1, &VBO);
+        }
+};
+
+
+//GRID====================================END
+
 // camera
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -87,6 +170,11 @@ int main (int argc, char* argv[])
     shader lightingShader = shader("shaders/baselighting.vs", "shaders/baselighting.frag");
 	
     Model ourModel = Model("assets/Nanosuit/nanosuit.obj");
+
+    shader gridshader = shader("shaders/grid.vert", "shaders/grid.frag");
+
+    Grid grid = Grid(30, 30, &gridshader);
+    grid.Init();
    //shader lightingShader("shaders/colors.vert", "shaders/colors.frag");
    //shader lightCubeShader("shaders/light_cube.vert", "shaders/light_cube.frag");
 
@@ -309,7 +397,7 @@ ImGui_ImplOpenGL3_Init();
     lightingShader.bind();
 		
     model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));	
+    model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	
 
     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -335,6 +423,8 @@ ImGui_ImplOpenGL3_Init();
 
     ourModel.Draw(lightingShader);
 
+    grid.draw(view, projection);
+    
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -343,6 +433,7 @@ ImGui_ImplOpenGL3_Init();
 
 
   lightingShader.unbind();
+    gridshader.unbind();
 
   ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
