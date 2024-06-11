@@ -46,26 +46,29 @@ struct Grid {
         // Clear previous data
         gridVertices.clear();
 
+        float halfWidth = static_cast<float>(width) / 2.0f;
+        float halfDepth = static_cast<float>(depth) / 2.0f;
+
         // Generate vertices for vertical lines
         for (unsigned int i = 0; i <= width; ++i) {
-            float x = static_cast<float>(i);
+            float x = static_cast<float>(i) - halfWidth;
             // Vertical line from (x, 0, 0) to (x, 0, depth)
             gridVertices.push_back(x);
             gridVertices.push_back(0.0f);
-            gridVertices.push_back(0.0f);
+            gridVertices.push_back(-halfDepth);
             gridVertices.push_back(x);
             gridVertices.push_back(0.0f);
-            gridVertices.push_back(static_cast<float>(depth));
+            gridVertices.push_back(halfDepth);
         }
 
         // Generate vertices for horizontal lines
         for (unsigned int j = 0; j <= depth; ++j) {
-            float z = static_cast<float>(j);
+            float z = static_cast<float>(j) - halfDepth;
             // Horizontal line from (0, 0, z) to (width, 0, z)
-            gridVertices.push_back(0.0f);
+            gridVertices.push_back(-halfWidth);
             gridVertices.push_back(0.0f);
             gridVertices.push_back(z);
-            gridVertices.push_back(static_cast<float>(width));
+            gridVertices.push_back(halfWidth);
             gridVertices.push_back(0.0f);
             gridVertices.push_back(z);
         }
@@ -90,7 +93,7 @@ struct Grid {
         // Bind VAO and draw the grid
         // Use shader program
         gridshade->bind();
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(-4.0f, -2.0f, -2.0f));
+        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 MVP = projection * view * model;
         glUniformMatrix4fv(glGetUniformLocation(gridshade->shaderProgramId, "MVP"), 1, GL_FALSE, glm::value_ptr(MVP));
 
@@ -111,8 +114,8 @@ struct Grid {
 //GRID====================================END
 
 // camera
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraPos   = glm::vec3(-0.1f, 4.0f, 7.0f);
+glm::vec3 cameraFront = glm::vec3(-0.02f, -0.3f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
 glm::vec3 pointLightPositions[] =
@@ -173,7 +176,7 @@ int main (int argc, char* argv[])
 
     shader gridshader = shader("shaders/grid.vert", "shaders/grid.frag");
 
-    Grid grid = Grid(30, 30, &gridshader);
+    Grid grid = Grid(20, 20, &gridshader);
     grid.Init();
    //shader lightingShader("shaders/colors.vert", "shaders/colors.frag");
    //shader lightCubeShader("shaders/light_cube.vert", "shaders/light_cube.frag");
@@ -392,11 +395,15 @@ ImGui_ImplOpenGL3_Init();
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
     glm::mat4 view  = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    printf("view = %d \n", view);
+    printf("cameraPos = (%f, %f, %f) \n", cameraPos.x, cameraPos.y, cameraPos.z);
+    printf("cameraFront = (%f, %f, %f) \n", cameraFront.x, cameraFront.y, cameraFront.z);
+    printf("cameraup = (%f, %f, %f) \n", cameraUp.x, cameraUp.y, cameraUp.z);
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WinWidth/ (float)WinHeight, 0.1f, 100.0f);
 
     lightingShader.bind();
 		
-    model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
+    //model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	
 
     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
