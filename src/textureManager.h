@@ -1,161 +1,94 @@
 #pragma once
 
-//#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
 #include <glad/glad.h>
-//#include "FreeImage.h"
-
 #include <vector>
+#include <algorithm>
 
 class TextureManager
 {
 public:
-	static TextureManager* Inst()
-	{
-		if (!m_inst)
-			m_inst = new TextureManager();
-		stbi_set_flip_vertically_on_load(true);
-		return m_inst;
-	}
-	virtual ~TextureManager()
-	{
-		UnloadAllTextures();
-	}
+    static TextureManager* Inst()
+    {
+        if (!m_inst)
+        {
+            m_inst = new TextureManager();
+            stbi_set_flip_vertically_on_load(true); // Flip images on load
+        }
+        return m_inst;
+    }
 
-	/*
-	GLuint LoadTexture(const char* filename, GLenum image_format = GL_RGB, GLint internal_format = GL_RGB, GLint level = 0, GLint border = 0)
-	{
-		//image format
-		FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-		//pointer to the image, once loaded
-		FIBITMAP *dib(0);
-		//pointer to the image data
-		BYTE* bits(0);
-		//image width and height
-		unsigned int width(0), height(0);
-		//OpenGL's image ID to map to
-		GLuint gl_texID;
+    ~TextureManager()
+    {
+        UnloadAllTextures();
+    }
 
-		//check the file signature and deduce its format
-		fif = FreeImage_GetFileType(filename, 0);
-		//if still unknown, try to guess the file format from the file extension
-		if (fif == FIF_UNKNOWN)
-			fif = FreeImage_GetFIFFromFilename(filename);
-		//if still unkown, return failure
-		if (fif == FIF_UNKNOWN)
-			return -1;
+    GLuint LoadTexture(const char* filename, GLenum image_format = GL_RGB, GLint internal_format = GL_RGB, GLint level = 0, GLint border = 0)
+    {
+        int width, height, nrChannels;
+        unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
 
-		//check that the plugin has reading capabilities and load the file
-		if (FreeImage_FIFSupportsReading(fif))
-			dib = FreeImage_Load(fif, filename);
-		//if the image failed to load, return failure
-		if (!dib)
-			return -1;
+        if (!data || width == 0 || height == 0)
+        {
+            std::cerr << "Failed to load texture: " << filename << std::endl;
+            return 0;
+        }
 
-		//retrieve the image data
-		bits = FreeImage_GetBits(dib);
-		//get the image width and height
-		width = FreeImage_GetWidth(dib);
-		height = FreeImage_GetHeight(dib);
-		//if this somehow one of these failed (they shouldn't), return failure
-		if ((bits == 0) || (width == 0) || (height == 0))
-			return -1;
+        GLuint gl_texID;
+        glGenTextures(1, &gl_texID);
+        glBindTexture(GL_TEXTURE_2D, gl_texID);
 
-		//generate an OpenGL texture ID for this texture
-		glGenTextures(1, &gl_texID);
-		//store the texture ID mapping
-		m_texID.push_back(gl_texID);
-		//bind to the new texture ID
-		glBindTexture(GL_TEXTURE_2D, gl_texID);
-		//store the texture data for OpenGL use
-		glTexImage2D(GL_TEXTURE_2D, level, internal_format, width, height,
-			border, image_format, GL_UNSIGNED_BYTE, bits);
+        GLenum format = image_format;
+        if (nrChannels == 1)
+            format = GL_RED;
+        else if (nrChannels == 3)
+            format = GL_RGB;
+        else if (nrChannels == 4)
+            format = GL_RGBA;
 
-		//Free FreeImage's copy of the data
-		FreeImage_Unload(dib);
+        glTexImage2D(GL_TEXTURE_2D, level, internal_format, width, height, border, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
 
-		//return success
-		return gl_texID;
-	}
-	*/
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	GLuint LoadTexture(const char* filename, GLenum image_format, GLint internal_format, GLint level, GLint border)
-	{
-		int width, height;
-		int nrChannels;
-		unsigned char* data;
-		GLuint gl_texID;
+        stbi_image_free(data);
 
-		// load image file
-		data = stbi_load(filename, &width, &height, &nrChannels, 0);
+        m_texID.push_back(gl_texID);
+        return gl_texID;
+    }
 
-		if ((data == 0) || (width == 0) || (height == 0))
-			return -1;
+    void UnloadTexture(const GLuint texID)
+    {
+        auto it = std::find(m_texID.begin(), m_texID.end(), texID);
+        if (it != m_texID.end())
+        {
+            glDeleteTextures(1, &texID);
+            m_texID.erase(it);
+        }
+    }
 
-		//generate an OpenGL texture ID for this texture
-		glGenTextures(1, &gl_texID);
-		//store the texture ID mapping
-		m_texID.push_back(gl_texID);
-		//bind to the new texture ID
-		glBindTexture(GL_TEXTURE_2D, gl_texID);
-		//store the texture data for OpenGL use
-		glTexImage2D(GL_TEXTURE_2D, level, internal_format, width, height,
-			border, image_format, GL_UNSIGNED_BYTE, data);
+    void BindTexture(const GLuint texID)
+    {
+        glBindTexture(GL_TEXTURE_2D, texID);
+    }
 
-		stbi_image_free(data);
+    void UnloadAllTextures()
+    {
+        for (GLuint texID : m_texID)
+        {
+            glDeleteTextures(1, &texID);
+        }
+        m_texID.clear();
+    }
 
-		return gl_texID;
-	}
+private:
+    TextureManager() {}
+    TextureManager(const TextureManager&) = delete;
+    TextureManager& operator=(const TextureManager&) = delete;
 
-	//free the memory for a texture
-	void UnloadTexture(const unsigned int texID)
-	{
-		auto id = find(m_texID.begin(), m_texID.end(), texID);
-		glDeleteTextures(1, &texID);
-		m_texID.erase(id);
-	}
-
-	//set the current texture
-	void BindTexture(const unsigned int texID)
-	{
-		glBindTexture(GL_TEXTURE_2D, texID);
-	}
-
-	//free all texture memory
-	void UnloadAllTextures()
-	{
-		//start at the begginning of the texture map
-		auto i = m_texID.begin();
-
-		while (m_texID.size() != 0)
-		{
-			glDeleteTextures(1, &m_texID[0]);
-			m_texID.erase(m_texID.begin());
-		}
-
-		//clear the texture map
-		m_texID.clear();
-	}
-
-protected:
-	TextureManager()
-	{
-		// call this ONLY when linking with FreeImage as a static library
-		//#ifdef FREEIMAGE_LIB
-		//FreeImage_Initialise();
-		//#endif
-		m_inst = nullptr;
-	}
-	TextureManager(const TextureManager& tm)
-	{
-		if (!m_inst)
-			m_inst = new TextureManager();
-		m_texID.clear();
-	}
-	TextureManager& operator=(const TextureManager& tm);
-
-	static TextureManager* m_inst;
-	std::vector<GLuint> m_texID;
+    static TextureManager* m_inst;
+    std::vector<GLuint> m_texID;
 };
-

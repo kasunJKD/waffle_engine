@@ -18,36 +18,43 @@ Mesh::Mesh(
  
 void Mesh::Draw(shader shader)
 {
-    GLuint diffuseNr = 1, specularNr = 1;
+    GLuint diffuseNr = 1;
+    GLuint specularNr = 1;
+    GLuint normalNr = 1;
+    GLuint heightNr = 1;
 
     for (GLuint i = 0; i < this->textures.size(); i++)
     {
-            glActiveTexture(GL_TEXTURE0 + i);
+        glActiveTexture(GL_TEXTURE0 + i);
 
-            stringstream ss;
-            string number;
-            string name = this->textures[i].type;
-            if (name == "texture_diffuse") 
-                    ss << diffuseNr++;
-            else if (name == "texture_specular")
-                    ss << specularNr++;
-            number = ss.str();
+        std::string number;
+        std::string name = this->textures[i].type;
 
-            glUniform1i(glGetUniformLocation(shader.shaderProgramId, (name + number).c_str()), i);
-            TextureManager::Inst()->BindTexture(this->textures[i].id);
+        if (name == "texture_diffuse")
+            number = std::to_string(diffuseNr++);
+        else if (name == "texture_specular")
+            number = std::to_string(specularNr++);
+        else if (name == "texture_normal")
+            number = std::to_string(normalNr++);
+        else if (name == "texture_height")
+            number = std::to_string(heightNr++);
+
+        glUniform1i(glGetUniformLocation(shader.shaderProgramId, (name + number).c_str()), i);
+        TextureManager::Inst()->BindTexture(this->textures[i].id);
     }
 
-    glUniform1f(glGetUniformLocation(shader.shaderProgramId, "material.shininess"), 16.0f);
-
+    // Draw the mesh
     glBindVertexArray(this->VAO);
-    glDrawElements(GL_TRIANGLES, this->indices.size(), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, this->indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
+    // Always good practice to set everything back to defaults once configured.
     for (GLuint i = 0; i < this->textures.size(); i++)
     {
-            glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
+
 }
 
 void Mesh::setupMesh()

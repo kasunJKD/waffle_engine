@@ -174,6 +174,8 @@ int main (int argc, char* argv[])
 	
     Model ourModel = Model("assets/Nanosuit/nanosuit.obj");
 
+    Model sponzaModel = Model("assets/Sponza/glTF/Sponza.gltf");
+
     shader gridshader = shader("shaders/grid.vert", "shaders/grid.frag");
 
     Grid grid = Grid(20, 20, &gridshader);
@@ -312,7 +314,7 @@ ImGui_ImplOpenGL3_Init();
         }
         else if (Event.type == SDL_KEYDOWN)
         {
-                float cameraSpeed = static_cast<float>(10.0 * deltaTime);
+                float cameraSpeed = static_cast<float>(100.0 * deltaTime);
                 switch (Event.key.keysym.sym)
                 {                    
                     case SDLK_ESCAPE:
@@ -395,40 +397,37 @@ ImGui_ImplOpenGL3_Init();
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
     glm::mat4 view  = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    printf("view = %d \n", view);
-    printf("cameraPos = (%f, %f, %f) \n", cameraPos.x, cameraPos.y, cameraPos.z);
-    printf("cameraFront = (%f, %f, %f) \n", cameraFront.x, cameraFront.y, cameraFront.z);
-    printf("cameraup = (%f, %f, %f) \n", cameraUp.x, cameraUp.y, cameraUp.z);
-    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WinWidth/ (float)WinHeight, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WinWidth/ (float)WinHeight, 0.1f, 1000.0f);
 
     lightingShader.bind();
 		
     //model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	
 
-    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
-    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "view"), 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "model"), 1, GL_FALSE, glm::value_ptr(model));		
-
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "viewPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].diffuse"), 1.0f, 1.0f, 1.0f);
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
-    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].linear"), 0.009);
-    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].quadratic"), 0.0032);
-
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].position"), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].ambient"), 0.05f, 0.05f, 0.05f);
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].diffuse"), 1.0f, 1.0f, 1.0f);
-    glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
-    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].constant"), 1.0f);
-    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].linear"), 0.009);
-    glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].quadratic"), 0.0032);
+     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "view"), 1, GL_FALSE, glm::value_ptr(view));
+     glUniformMatrix4fv(glGetUniformLocation(lightingShader.shaderProgramId, "model"), 1, GL_FALSE, glm::value_ptr(model));		
+    //
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "viewPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+    //
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].ambient"), 0.05f, 0.05f, 0.05f);
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].diffuse"), 1.0f, 1.0f, 1.0f);
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].specular"), 1.0f, 1.0f, 1.0f);
+    // glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].constant"), 1.0f);
+    // glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].linear"), 0.009);
+    // glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[0].quadratic"), 0.0032);
+    //
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].position"), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].ambient"), 0.05f, 0.05f, 0.05f);
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].diffuse"), 1.0f, 1.0f, 1.0f);
+    // glUniform3f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].specular"), 1.0f, 1.0f, 1.0f);
+    // glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].constant"), 1.0f);
+    // glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].linear"), 0.009);
+    // glUniform1f(glGetUniformLocation(lightingShader.shaderProgramId, "pointLights[1].quadratic"), 0.0032);
 
     ourModel.Draw(lightingShader);
+    sponzaModel.Draw(lightingShader);
 
     grid.draw(view, projection);
     
