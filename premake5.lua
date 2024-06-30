@@ -32,6 +32,8 @@ files({
 	"imgui/imgui*.cpp",
 	"imgui/backends/imgui_impl_sdl2.cpp",
 	"imgui/backends/imgui_impl_opengl3.cpp",
+	"src/camera.cpp",
+	"src/grid.h",
 })
 
 filter("system:windows")

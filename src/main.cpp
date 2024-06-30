@@ -15,7 +15,10 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.h"
+#include "grid.h"
 #include "model.h"
+#include "camera.h"
+
 typedef int32_t i32;
 typedef uint32_t u32;
 typedef uint32_t b32;
@@ -26,98 +29,6 @@ using namespace std;
 #define WinHeight 1000
 #define GL_GREY .5, .5, .5, 1
 
-//GRID====================================
-struct Grid {
-    unsigned int width;
-    unsigned int depth;
-    shader* gridshade;
-    std::vector<float> gridVertices;
-    GLuint VAO, VBO;
-
-    Grid(unsigned int w, unsigned int d, shader* s)
-    {
-        this->width = w;
-        this->depth = d;
-        this->gridshade = s;
-    }
-
-    void Init()
-    {
-        // Clear previous data
-        gridVertices.clear();
-
-        float halfWidth = static_cast<float>(width) / 2.0f;
-        float halfDepth = static_cast<float>(depth) / 2.0f;
-
-        // Generate vertices for vertical lines
-        for (unsigned int i = 0; i <= width; ++i) {
-            float x = static_cast<float>(i) - halfWidth;
-            // Vertical line from (x, 0, 0) to (x, 0, depth)
-            gridVertices.push_back(x);
-            gridVertices.push_back(0.0f);
-            gridVertices.push_back(-halfDepth);
-            gridVertices.push_back(x);
-            gridVertices.push_back(0.0f);
-            gridVertices.push_back(halfDepth);
-        }
-
-        // Generate vertices for horizontal lines
-        for (unsigned int j = 0; j <= depth; ++j) {
-            float z = static_cast<float>(j) - halfDepth;
-            // Horizontal line from (0, 0, z) to (width, 0, z)
-            gridVertices.push_back(-halfWidth);
-            gridVertices.push_back(0.0f);
-            gridVertices.push_back(z);
-            gridVertices.push_back(halfWidth);
-            gridVertices.push_back(0.0f);
-            gridVertices.push_back(z);
-        }
-
-        // Setup buffers
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, gridVertices.size() * sizeof(float), gridVertices.data(), GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
-   
-    void draw(const glm::mat4& view, const glm::mat4& projection)
-    {
-        // Bind VAO and draw the grid
-        // Use shader program
-        gridshade->bind();
-        glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 MVP = projection * view * model;
-        glUniformMatrix4fv(glGetUniformLocation(gridshade->shaderProgramId, "MVP"), 1, GL_FALSE, glm::value_ptr(MVP));
-
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_LINES, 0, gridVertices.size() / 3);
-        glBindVertexArray(0);   
-    }
-
-     ~Grid()
-        {
-            // Cleanup OpenGL resources
-            glDeleteVertexArrays(1, &VAO);
-            glDeleteBuffers(1, &VBO);
-        }
-};
-
-
-//GRID====================================END
-
-// camera
-glm::vec3 cameraPos   = glm::vec3(-0.1f, 4.0f, 7.0f);
-glm::vec3 cameraFront = glm::vec3(-0.02f, -0.3f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
-
 glm::vec3 pointLightPositions[] =
 {
 	glm::vec3(2.3f, -1.6f, -3.0f),
@@ -125,11 +36,8 @@ glm::vec3 pointLightPositions[] =
 };
 
 bool firstMouse = true;
-float yaw   = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
-float pitch =  0.0f;
 float lastX =  800.0f / 2.0;
 float lastY =  600.0 / 2.0;
-float fov   =  45.0f;
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -162,6 +70,9 @@ int main (int argc, char* argv[])
    SDL_SetWindowTitle(Window, "engine");
    SDL_ShowWindow(Window);
 
+    camera GameCamera = {};
+    initializeCamera(&GameCamera);
+
    gladLoadGLLoader(SDL_GL_GetProcAddress);
 
     // configure global opengl state
@@ -180,118 +91,17 @@ int main (int argc, char* argv[])
 
     Grid grid = Grid(20, 20, &gridshader);
     grid.Init();
-   //shader lightingShader("shaders/colors.vert", "shaders/colors.frag");
-   //shader lightCubeShader("shaders/light_cube.vert", "shaders/light_cube.frag");
-
-    // Vertex input data
-    // float vertices[] = {
-    // -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-    //  0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    //  0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    //  0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    // -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    // -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 
-    //
-    // -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    //  0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    //  0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    //  0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    // -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    // -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-    //
-    // -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    // -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    // -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    // -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-    // -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    // -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    //
-    //  0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-    //  0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-    //  0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-    //  0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-    //  0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-    //  0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-    //
-    // -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-    //  0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-    //  0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    //  0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    // -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    // -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-    //
-    // -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-    //  0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-    //  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    //  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    // -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    // -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-    // };
-    //
-    // unsigned int VBO, cubeVAO;
-    // glGenVertexArrays(1, &cubeVAO);
-    // glGenBuffers(1, &VBO);
-    //
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    //
-    // glBindVertexArray(cubeVAO);
-    //
-    // // position attribute
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-    // // normal attribute
-    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-    //
-    // // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-    // unsigned int lightCubeVAO;
-    // glGenVertexArrays(1, &lightCubeVAO);
-    // glBindVertexArray(lightCubeVAO);
-    //
-    // // we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
-    // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    //
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-    // load and create a texture 
-    // -------------------------
-    //unsigned int texture1; //texture2;
-    // texture 1
-    // ---------
-    //glGenTextures(1, &texture1);
-    //glBindTexture(GL_TEXTURE_2D, texture1);
-    // set the texture wrapping parameters
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    //int width, height, nrChannels;
-    //stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    //unsigned char *data = stbi_load(FileSystem::getPath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
-    //if (data)
-    //{
-    //    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    //    glGenerateMipmap(GL_TEXTURE_2D);
-    //}
-    //else
-    //{
-    //   std::cout << "Failed to load texture" << std::endl;
-    //}
-    //stbi_image_free(data);
 
     // Setup Dear ImGui context
-IMGUI_CHECKVERSION();
-ImGui::CreateContext();
-ImGuiIO& io = ImGui::GetIO();
-io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-// Setup Platform/Renderer backends
-ImGui_ImplSDL2_InitForOpenGL(Window, Context);
-ImGui_ImplOpenGL3_Init();
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForOpenGL(Window, Context);
+    ImGui_ImplOpenGL3_Init();
 
     
   
@@ -314,7 +124,7 @@ ImGui_ImplOpenGL3_Init();
         }
         else if (Event.type == SDL_KEYDOWN)
         {
-                float cameraSpeed = static_cast<float>(100.0 * deltaTime);
+                float cameraSpeed = static_cast<float>(GameCamera.speed * deltaTime);
                 switch (Event.key.keysym.sym)
                 {                    
                     case SDLK_ESCAPE:
@@ -325,16 +135,16 @@ ImGui_ImplOpenGL3_Init();
                         SDL_SetWindowFullscreen(Window, FullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
                         break;
                     case SDLK_w:
-                        cameraPos += cameraSpeed * cameraFront;
+                        GameCamera.position += cameraSpeed * GameCamera.cameraFront;
                         break;
                     case SDLK_s:
-                        cameraPos -= cameraSpeed * cameraFront;
+                        GameCamera.position -= cameraSpeed * GameCamera.cameraFront;
                         break;
                     case SDLK_a:
-                        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+                        GameCamera.position -= glm::normalize(glm::cross(GameCamera.cameraFront, GameCamera.up)) * cameraSpeed;
                         break;
                     case SDLK_d:
-                        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+                        GameCamera.position += glm::normalize(glm::cross(GameCamera.cameraFront,GameCamera.up)) * cameraSpeed;
                         break;
                 }
             }
@@ -360,28 +170,28 @@ ImGui_ImplOpenGL3_Init();
                     xoffset *= sensitivity;
                     yoffset *= sensitivity;
 
-                    yaw += xoffset;
-                    pitch -= yoffset;
+                    GameCamera.yaw += xoffset;
+                    GameCamera.pitch -= yoffset;
 
-                    if (pitch > 89.0f)
-                        pitch = 89.0f;
-                    if (pitch < -89.0f)
-                        pitch = -89.0f;
+                    if (GameCamera.pitch > 89.0f)
+                        GameCamera.pitch = 89.0f;
+                    if (GameCamera.pitch < -89.0f)
+                        GameCamera.pitch = -89.0f;
 
                     glm::vec3 front;
-                    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-                    front.y = sin(glm::radians(pitch));
-                    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-                    cameraFront = glm::normalize(front);
+                    front.x = cos(glm::radians(GameCamera.yaw)) * cos(glm::radians(GameCamera.pitch));
+                    front.y = sin(glm::radians(GameCamera.pitch));
+                    front.z = sin(glm::radians(GameCamera.yaw)) * cos(glm::radians(GameCamera.pitch));
+                    GameCamera.cameraFront = glm::normalize(front);
                 }
           }
             else if (Event.type == SDL_MOUSEWHEEL)
         {
-                fov -= static_cast<float>(Event.wheel.y);
-                if (fov < 1.0f)
-                    fov = 1.0f;
-                if (fov > 45.0f)
-                    fov = 45.0f;
+                GameCamera.fov -= static_cast<float>(Event.wheel.y);
+                if (GameCamera.fov < 1.0f)
+                    GameCamera.fov = 1.0f;
+                if (GameCamera.fov > 45.0f)
+                    GameCamera.fov = 45.0f;
                 break;
         }
     }
@@ -396,8 +206,8 @@ ImGui_ImplOpenGL3_Init();
 
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-    glm::mat4 view  = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WinWidth/ (float)WinHeight, 0.1f, 1000.0f);
+    glm::mat4 view  = glm::lookAt(GameCamera.position,GameCamera.position + GameCamera.cameraFront, GameCamera.up);
+    glm::mat4 projection = glm::perspective(glm::radians(GameCamera.fov), (float)WinWidth/ (float)WinHeight, 0.1f, 1000.0f);
 
     lightingShader.bind();
 		
