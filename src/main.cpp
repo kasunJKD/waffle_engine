@@ -89,7 +89,7 @@ int main (int argc, char* argv[])
 
     shader gridshader = shader("shaders/grid.vert", "shaders/grid.frag");
 
-    Grid grid = Grid(20, 20, &gridshader);
+    Grid grid = Grid(5000, 5000, &gridshader);
     grid.Init();
 
     // Setup Dear ImGui context
@@ -145,6 +145,12 @@ int main (int argc, char* argv[])
                         break;
                     case SDLK_d:
                         GameCamera.position += glm::normalize(glm::cross(GameCamera.cameraFront,GameCamera.up)) * cameraSpeed;
+                        break;
+                    case SDLK_m:
+                        setCameraToTestGround(&GameCamera);
+                        break;
+                    case SDLK_p:
+                        resetCameraPos(&GameCamera);
                         break;
                 }
             }
@@ -240,6 +246,9 @@ int main (int argc, char* argv[])
     sponzaModel.Draw(lightingShader);
 
     grid.draw(view, projection);
+
+    //draw test ground
+
     
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
