@@ -10,6 +10,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
 
 
 using namespace std;
@@ -24,6 +25,7 @@ public:
     void unbind();
 
     void setVec3(const char* uniformName,float v0, float v1, float v2);
+    void setMat4(const std::string &name, const glm::mat4 &mat) const;
 private:
     GLuint vertexShaderId;
     GLuint fragmentShaderId;

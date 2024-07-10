@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "model.h"
 #include "camera.h"
+#include "Test.h"
 
 typedef int32_t i32;
 typedef uint32_t u32;
@@ -45,6 +46,8 @@ float lastFrame = 0.0f;
 
 // lighting
 glm::vec3 lightPos(1.2f, 0.5f, 1.0f);
+
+bool testbed_bool = false;
 
 int main (int argc, char* argv[])
 {
@@ -82,6 +85,11 @@ int main (int argc, char* argv[])
     glViewport(0, 0, WinWidth, WinHeight);
 
     shader lightingShader = shader("shaders/baselighting.vs", "shaders/baselighting.frag");
+
+    shader testshader = shader("shaders/test.vert", "shaders/test.frag");
+    TESTBED *testbed = initTestBed(); 
+    testbed->testShader = &testshader;
+    initTestData(testbed);
 	
     Model ourModel = Model("assets/Nanosuit/nanosuit.obj");
 
@@ -148,9 +156,11 @@ int main (int argc, char* argv[])
                         break;
                     case SDLK_m:
                         setCameraToTestGround(&GameCamera);
+                        testbed_bool = true;
                         break;
                     case SDLK_p:
                         resetCameraPos(&GameCamera);
+                        testbed_bool = false;
                         break;
                 }
             }
@@ -248,6 +258,13 @@ int main (int argc, char* argv[])
     grid.draw(view, projection);
 
     //draw test ground
+    if (testbed_bool)
+    {
+        updateTestBed(testbed, projection, view);
+    } else
+    {
+       // clearTest(testbed);
+    }
 
     
     ImGui::Render();
