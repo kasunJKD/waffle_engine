@@ -205,24 +205,28 @@ void initTestData(TESTBED* testbed)
 
 void updateTestBed(TESTBED* testbed, glm::mat4 proj, glm::mat4 view)
 {
+    // Enable depth testing and stencil operations
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  
+  
+    // Clear color, depth, and stencil buffers
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
     glm::mat4 model = glm::mat4(1.0f);
     
-    // Bind texture on corresponding texture unit
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, testbed->textureid);
+    // Bind texture for the main shader
 
-    testbed->stencilSingleColor->bind();
-    testbed->stencilSingleColor->setMat4("projection", proj);
-    testbed->stencilSingleColor->setMat4("view", view);
-    // Activate shader
+    // Activate and set uniforms for the main shader
     testbed->testShader->bind();
     testbed->testShader->setMat4("projection", proj);
     testbed->testShader->setMat4("view", view);
 
 
-    // draw floor as normal, but don't write the floor to the stencil buffer, we only care about the containers. We set its mask to 0x00 to not write to the stencil buffer.
+    // Draw the floor (disable stencil writing)
     glStencilMask(0x00);
     glBindVertexArray(testbed->planeVAO);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, testbed->planetextureid);
     model = glm::mat4(1.0f);
     model = glm::translate(model, testbed->plane_position);
@@ -230,32 +234,43 @@ void updateTestBed(TESTBED* testbed, glm::mat4 proj, glm::mat4 view)
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
 
-    // Render the main cube
- // 1st. render pass, draw objects as normal, writing to the stencil buffer
-        // --------------------------------------------------------------------
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
+    // Draw the cube (enable stencil writing)
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilMask(0xFF);
+    
+    glBindVertexArray(testbed->VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, testbed->textureid);
+    model = glm::mat4(1.0f);
     model = glm::translate(model, testbed->test_cube.position);
     testbed->testShader->setMat4("model", model);
-
-    glBindVertexArray(testbed->VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
+    // Draw the scaled cube with stencil test (stencil not equal)
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        glStencilMask(0x00);
-        glDisable(GL_DEPTH_TEST);
-        testbed->stencilSingleColor->bind();
-        float scale = 1.2f;
-    for (const auto& cube_position : testbed->test_cube.cube_positions)
-    {
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, cube_position);
-        testbed->testShader->setMat4("model", model);
-        model = glm::scale(model, glm::vec3(scale, scale, scale));
-        testbed->stencilSingleColor->setMat4("model", model);
+    glStencilMask(0x00); // Disable writing to the stencil buffer
+    glDisable(GL_DEPTH_TEST); // Disable depth testing for the outline
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    // Activate and set uniforms for the stencil shader
+    testbed->stencilSingleColor->bind();
+    testbed->stencilSingleColor->setMat4("projection", proj);
+    testbed->stencilSingleColor->setMat4("view", view);
+    float scale = 1.2f;
+
+    glBindVertexArray(testbed->VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, testbed->textureid);
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, testbed->test_cube.position);
+    model = glm::scale(model, glm::vec3(scale, scale, scale));
+    testbed->stencilSingleColor->setMat4("model", model);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+
+    // Re-enable stencil writing and depth testing
+    glStencilMask(0xFF);
+    glStencilFunc(GL_ALWAYS, 0, 0xFF);
+    glEnable(GL_DEPTH_TEST);
 
 }
 

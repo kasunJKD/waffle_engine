@@ -81,18 +81,18 @@ int main (int argc, char* argv[])
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glEnable(GL_STENCIL_TEST);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    // glDepthFunc(GL_LESS);
+    // glEnable(GL_STENCIL_TEST);
+    // glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    // glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
     
     glViewport(0, 0, WinWidth, WinHeight);
 
     shader lightingShader = shader("shaders/baselighting.vs", "shaders/baselighting.frag");
 
-    shader testshader = shader("shaders/depth_testing.vert", "shaders/depth_testing.frag");
+    shader testshader = shader("shaders/stencil_testing.vert", "shaders/stencil_testing.frag");
     
-    shader stencilTestSingleColor = shader("shaders/depth_testing.vert", "shaders/stencil_single_color.frag");
+    shader stencilTestSingleColor = shader("shaders/stencil_testing.vert", "shaders/stencil_single_color.frag");
 
 
     TESTBED *testbed = initTestBed();
