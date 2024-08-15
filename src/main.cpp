@@ -82,14 +82,22 @@ int main (int argc, char* argv[])
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
     
     glViewport(0, 0, WinWidth, WinHeight);
 
     shader lightingShader = shader("shaders/baselighting.vs", "shaders/baselighting.frag");
 
     shader testshader = shader("shaders/depth_testing.vert", "shaders/depth_testing.frag");
+    
+    shader stencilTestSingleColor = shader("shaders/depth_testing.vert", "shaders/stencil_single_color.frag");
+
+
     TESTBED *testbed = initTestBed();
     testbed->testShader = &testshader;
+    testbed->stencilSingleColor = &stencilTestSingleColor;
     initTestData(testbed);
 	
     Model ourModel = Model("assets/Nanosuit/nanosuit.obj");
@@ -218,7 +226,7 @@ int main (int argc, char* argv[])
     ImGui::ShowDemoWindow();
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
     // create transformations
     glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first

@@ -23,6 +23,7 @@ struct TESTBED
 {
     TESTBED_cube test_cube;
     shader* testShader;
+    shader* stencilSingleColor;
     unsigned int VAO, VBO, planeVAO, planeVBO;
     unsigned int textureid, planetextureid;
     unsigned char* stbi_data;
@@ -98,6 +99,7 @@ TESTBED* initTestBed()
     testbed->test_cube = testcube;
     // Initialize other members of the TESTBED structure
     testbed->testShader = nullptr;
+    testbed->stencilSingleColor = nullptr;
     testbed->VAO = 0;
     testbed->VBO = 0;
     testbed->textureid = 0;
@@ -209,27 +211,17 @@ void updateTestBed(TESTBED* testbed, glm::mat4 proj, glm::mat4 view)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, testbed->textureid);
 
+    testbed->stencilSingleColor->bind();
+    testbed->stencilSingleColor->setMat4("projection", proj);
+    testbed->stencilSingleColor->setMat4("view", view);
     // Activate shader
     testbed->testShader->bind();
     testbed->testShader->setMat4("projection", proj);
     testbed->testShader->setMat4("view", view);
 
-    // Render the main cube
-    model = glm::translate(model, testbed->test_cube.position);
-    testbed->testShader->setMat4("model", model);
 
-    glBindVertexArray(testbed->VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-    for (const auto& cube_position : testbed->test_cube.cube_positions)
-    {
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, cube_position);
-        testbed->testShader->setMat4("model", model);
-
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
-
+    // draw floor as normal, but don't write the floor to the stencil buffer, we only care about the containers. We set its mask to 0x00 to not write to the stencil buffer.
+    glStencilMask(0x00);
     glBindVertexArray(testbed->planeVAO);
     glBindTexture(GL_TEXTURE_2D, testbed->planetextureid);
     model = glm::mat4(1.0f);
@@ -237,6 +229,34 @@ void updateTestBed(TESTBED* testbed, glm::mat4 proj, glm::mat4 view)
     testbed->testShader->setMat4("model", model);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
+
+    // Render the main cube
+ // 1st. render pass, draw objects as normal, writing to the stencil buffer
+        // --------------------------------------------------------------------
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+    model = glm::translate(model, testbed->test_cube.position);
+    testbed->testShader->setMat4("model", model);
+
+    glBindVertexArray(testbed->VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+        testbed->stencilSingleColor->bind();
+        float scale = 1.2f;
+    for (const auto& cube_position : testbed->test_cube.cube_positions)
+    {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, cube_position);
+        testbed->testShader->setMat4("model", model);
+        model = glm::scale(model, glm::vec3(scale, scale, scale));
+        testbed->stencilSingleColor->setMat4("model", model);
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
 }
 
 void clearTest(TESTBED* test)
