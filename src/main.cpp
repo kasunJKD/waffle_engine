@@ -87,8 +87,10 @@ int main (int argc, char* argv[])
 
     shader lightingShader = shader("shaders/baselighting.vs", "shaders/baselighting.frag");
 
-    shader testshader = shader("shaders/depth_testing.vert", "shaders/depth_testing.frag");
+    shader testshader = shader("shaders/test.vert", "shaders/test.frag");
+    shader grassShader = shader("shaders/blending.vert", "shaders/bending.frag");
     TESTBED *testbed = initTestBed();
+    testbed->grassShader = &grassShader;
     testbed->testShader = &testshader;
     initTestData(testbed);
 	

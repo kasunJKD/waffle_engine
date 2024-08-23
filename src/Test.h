@@ -18,13 +18,21 @@ struct TESTBED_cube
     glm::vec3 position;
     std::vector<glm::vec3> cube_positions;
 };
+struct TESTBED_grass 
+{
+    std::vector<float> grassVertices;
+    std::string file_path;
+    std::vector<glm::vec3> grass_positions;
+};
 
 struct TESTBED
 {
     TESTBED_cube test_cube;
+    TESTBED_grass test_grass;
     shader* testShader;
-    unsigned int VAO, VBO, planeVAO, planeVBO;
-    unsigned int textureid, planetextureid;
+    shader* grassShader;
+    unsigned int VAO, VBO, planeVAO, planeVBO, grassVAO, grassVBO;
+    unsigned int textureid, planetextureid, grassTextureId;
     unsigned char* stbi_data;
     std::vector<float> planeVertices;
     std::string plane_texture_file_path;
@@ -98,6 +106,7 @@ TESTBED* initTestBed()
     testbed->test_cube = testcube;
     // Initialize other members of the TESTBED structure
     testbed->testShader = nullptr;
+    testbed->grassShader = nullptr;
     testbed->VAO = 0;
     testbed->VBO = 0;
     testbed->textureid = 0;
@@ -108,7 +117,26 @@ TESTBED* initTestBed()
         glm::vec3( 1.0f,  2.0f, 700.0f),
     };
     testbed->plane_position = glm::vec3(-0.1f, 1.0f, 700.0f);
+    
+    TESTBED_grass test_grass = {};
+    test_grass.grassVertices = {
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
 
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+        1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+    test_grass.file_path = "assets/grass.png";
+    test_grass.grass_positions = {
+        glm::vec3(-1.5f, 1.0f, 700.48f),
+        glm::vec3( 1.5f, 1.0f, 700.51f),
+        glm::vec3( 0.0f, 1.0f, 700.7f),
+        glm::vec3(-0.3f, 1.0f, 700.3f),
+        glm::vec3 (0.5f, 1.0f, 700.6f)
+    };
+    testbed->test_grass = test_grass;
 
     return testbed;
 }
@@ -138,6 +166,21 @@ void initTestData(TESTBED* testbed)
 
     glBindBuffer(GL_ARRAY_BUFFER, testbed->planeVBO);
     glBufferData(GL_ARRAY_BUFFER, testbed->planeVertices.size() * sizeof(float), testbed->planeVertices.data(), GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // texture coord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    //grass
+    glGenVertexArrays(1, &testbed->grassVAO);
+    glGenBuffers(1, &testbed->grassVBO);
+
+    glBindVertexArray(testbed->grassVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, testbed->grassVAO);
+    glBufferData(GL_ARRAY_BUFFER, testbed->test_grass.grassVertices.size() * sizeof(float), testbed->test_grass.grassVertices.data(), GL_STATIC_DRAW);
 
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
@@ -199,6 +242,31 @@ void initTestData(TESTBED* testbed)
 
     testbed->testShader->bind();
     glUniform1i(glGetUniformLocation(testbed->testShader->shaderProgramId, "texture1"), 0);
+
+    glGenTextures(1, &testbed->grassTextureId);
+    glBindTexture(GL_TEXTURE_2D, testbed->grassTextureId);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load image, create texture and generate mipmaps
+    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+    int width3, height3, nrChannels3;
+    unsigned char *data3 = stbi_load(testbed->test_grass.file_path.c_str(), &width3, &height3, &nrChannels3, 0);
+    if (data3)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width3, height3, 0, GL_RGB, GL_UNSIGNED_BYTE, data3);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data3);
+    testbed->grassShader->bind();
+    glUniform1i(glGetUniformLocation(testbed->grassShader->shaderProgramId, "texture1"), 0);
 }
 
 void updateTestBed(TESTBED* testbed, glm::mat4 proj, glm::mat4 view)
@@ -237,6 +305,30 @@ void updateTestBed(TESTBED* testbed, glm::mat4 proj, glm::mat4 view)
     testbed->testShader->setMat4("model", model);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
+    
+    //grass
+
+    // Activate shader
+    testbed->grassShader->bind();
+    testbed->grassShader->setMat4("projection", proj);
+    testbed->grassShader->setMat4("view", view);
+    testbed->grassShader->setMat4("model", model);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(testbed->grassVAO);
+    glBindTexture(GL_TEXTURE_2D, testbed->grassTextureId);
+
+     for (const auto& grass_position : testbed->test_grass.grass_positions)
+    {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, grass_position);
+        testbed->grassShader->setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+
+    glBindVertexArray(0);
+
 }
 
 void clearTest(TESTBED* test)
