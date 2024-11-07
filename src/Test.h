@@ -1,3 +1,31 @@
+//Initialisation:
+//
+//
+//     glGenVertexArrays(1, &asteroid_vao);
+//     glBindVertexArray(asteroid_vao);
+//     glBindBuffer(GL_ARRAY_BUFFER, asteroid_buffer_object);
+//     glEnableVertexAttribArray(0);
+//     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+//
+//     glGenVertexArrays(1, &ship_vao);
+//     glBindVertexArray(ship_vao);
+//     glBindBuffer(GL_ARRAY_BUFFER, ship_buffer_object);
+//     glEnableVertexAttribArray(0);
+//     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+//
+//     glBindVertexArray(0);
+//
+// Rendering:
+//
+//
+//     glUseProgram(theProgram);
+//     glBindVertexArray(asteroid_vao);
+//     glDrawArrays(GL_LINE_LOOP, 0, num_asteroid_vertices);
+//     glBindVertexArray(ship_vao);
+//     glDrawArrays(GL_LINE_LOOP, 0, num_ship_vertices);
+//     glBindVertexArray(0);
+//     glUseProgram(0);
+
 #ifndef TEST_H
 #define TEST_H
 
