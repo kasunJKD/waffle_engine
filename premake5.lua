@@ -1,53 +1,47 @@
-require("../export-compile-commands")
+workspace("Engine")
+    configurations({ "Debug", "Release" })
+    platforms({ "x64" })
+    location("build")
 
-workspace("MyGame")
-configurations({ "Debug", "Release" })
-platforms({ "x64" })
-location("build")
+project("Engine")
+    kind("StaticLib") -- Static library for Engine
+    language("C++")
+    targetdir("bin/%{cfg.buildcfg}/Engine")
+    includedirs({
+        "vendors/include",
+        "vendors/include/glad/include", -- Include glad headers
+        "vendors/include/SDL2",
+        "vendors",
+        "imgui",
+        "imgui/backends",
+        "vendors/include/assimp",
+    })
+    files({
+        "engine/**.cpp",
+        "engine/**.h",
+        "vendors/include/glad/src/glad.c" -- Ensure glad.c is included in the project
+    })
+    filter("system:windows")
+        links({ "user32", "opengl32", "SDL2", "SDL2main", "assimp-vc143-mt" })
+        libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp" })
 
-toolset("clang")
-
-project("MyGame")
-kind("ConsoleApp")
-language("C++")
-targetdir("bin/%{cfg.buildcfg}")
-
-includedirs({
-	"vendors/include",
-	"vendors/include/glad/include",
-	"vendors/include/SDL2",
-	"vendors",
-	"imgui",
-	"imgui/backends",
-	"vendors/include/assimp",
-})
-
-files({
-	"src/main.cpp",
-	"src/shader.cpp",
-	"src/mesh.cpp",
-	"src/model.h",
-	"src/textureManager.h",
-	"vendors/include/glad/src/glad.c",
-	"imgui/imgui*.cpp",
-	"imgui/backends/imgui_impl_sdl2.cpp",
-	"imgui/backends/imgui_impl_opengl3.cpp",
-	"src/camera.cpp",
-	"src/grid.h",
-	"src/Test.h",
-})
-
-filter("system:windows")
-links({ "user32", "opengl32", "SDL2", "SDL2main", "assimp-vc143-mt" })
-libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp" })
-
-filter("system:linux")
-links({ "GL", "dl", "pthread", "SDL2", "assimp" })
-
-filter("configurations:Debug")
-defines({ "DEBUG" })
-symbols("On")
-
-filter("configurations:Release")
-defines({ "NDEBUG" })
-optimize("On")
+project("Sandbox")
+    kind("ConsoleApp")
+    language("C++")
+    targetdir("bin/%{cfg.buildcfg}/Sandbox")
+    files({
+        "sandbox/**.cpp",
+        "sandbox/**.h"
+    })
+    includedirs({
+        "engine",
+        "sandbox",
+        "vendors/include",                 -- Include SDL2, GLAD, and other dependencies
+        "vendors/include/SDL2",
+        "vendors/include/glad/include",
+        "imgui",
+        "imgui/backends",
+        "vendors/include/assimp",
+    })
+    links({ "Engine", "SDL2", "SDL2main", "assimp-vc143-mt" }) -- Include glad here
+    libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp" })

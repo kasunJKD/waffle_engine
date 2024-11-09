@@ -66,7 +66,7 @@ struct Grid {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
     }
-   
+
     void draw(const glm::mat4& view, const glm::mat4& projection)
     {
         // Bind VAO and draw the grid
@@ -78,7 +78,7 @@ struct Grid {
 
         glBindVertexArray(VAO);
         glDrawArrays(GL_LINES, 0, gridVertices.size() / 3);
-        glBindVertexArray(0);   
+        glBindVertexArray(0);
     }
 
      ~Grid()
