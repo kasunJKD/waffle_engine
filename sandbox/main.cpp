@@ -6,6 +6,14 @@
 
 entity_id initquad(EntityManager& entityManager);
 
+//@TODO refactor to a time.h
+float calculateDeltaTime() {
+    Uint32 currentTicks = SDL_GetTicks();
+    float deltaTime = (currentTicks - lastTicks) / 1000.0f;
+    lastTicks = currentTicks;
+    return deltaTime;
+}
+
 int main(int argc, char* argv[]) {
     Window window;
     EntityManager entityManager;
@@ -24,9 +32,14 @@ int main(int argc, char* argv[]) {
     bool isRunning = true;
     SDL_Event event;
 
+    //@TODO time.h
+    uint32_t lastTicks = SDL_GetTicks();
+
     while (isRunning) {
         // Poll for events
         while (SDL_PollEvent(&event)) {
+            float dt = calculateDeltaTime();
+
             if (event.type == SDL_QUIT) {
                 isRunning = false; // Exit if the window is closed
             } else if (event.type == SDL_WINDOWEVENT) {

@@ -22,8 +22,8 @@ project("Engine")
         "vendors/include/glad/src/glad.c" -- Ensure glad.c is included in the project
     })
     filter("system:windows")
-        links({ "user32", "opengl32", "SDL2", "SDL2main", "assimp-vc143-mt" })
-        libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp" })
+        links({ "SDL2", "SDL2main", "OpenAL32" })
+        libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp", "vendors/lib/openal" })
 
 project("Sandbox")
     kind("ConsoleApp")
@@ -43,5 +43,5 @@ project("Sandbox")
         "imgui/backends",
         "vendors/include/assimp",
     })
-    links({ "Engine", "SDL2", "SDL2main", "assimp-vc143-mt" }) -- Include glad here
+    links({ "Engine", "SDL2", "SDL2main" }) -- Include glad here
     libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp" })

@@ -6,20 +6,36 @@
 
 using entity_id = uint32_t;
 
-struct EntityMetaDataComponent {
+struct EntityMetaDataComponent
+{
     bool active;
 };
 
-struct TransformComponent {
+struct TransformComponent
+{
     glm::vec2 position;
     float rotation;   // In degrees
     glm::vec2 scale;
 };
 
-struct Shape_RectComponent {
+struct Shape_RectComponent
+{
     glm::vec2 size{50.0f, 50.0f};     // Width and height of the rectangle
     glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f}; // RGBA color for the rectangle
     bool filled = true;               // Flag to determine if the rectangle is filled or outlined
+};
+
+//audio based components
+//1.entity will have emitter component and update from it
+//2.manual sound play will be posible without a entity for UI
+struct AudioEmitterComponent
+{
+    std::string soundName;         // Name of the sound in SoundManager
+    ALuint source;                 // OpenAL source ID
+    bool isPlaying;                // Playback state
+    bool loop;                     // Looping flag
+    float volume;                  // Volume (0.0f to 1.0f)
+    float pitch;                   // Pitch (1.0f is normal)
 };
 
 #endif // ENTITY_H
