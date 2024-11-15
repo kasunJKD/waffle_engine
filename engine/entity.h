@@ -3,6 +3,10 @@
 
 #include <glm/glm.hpp>
 #include <cstdint>
+#include <string>
+#include <iostream> // For std::cerr and std::endl
+#include <AL/al.h>
+#include <AL/alc.h>
 
 using entity_id = uint32_t;
 
@@ -13,9 +17,13 @@ struct EntityMetaDataComponent
 
 struct TransformComponent
 {
-    glm::vec2 position;
+    glm::vec3 position;
     float rotation;   // In degrees
     glm::vec2 scale;
+
+    //used in audio
+    glm::vec3 forward;
+    glm::vec3 up;
 };
 
 struct Shape_RectComponent
@@ -36,6 +44,21 @@ struct AudioEmitterComponent
     bool loop;                     // Looping flag
     float volume;                  // Volume (0.0f to 1.0f)
     float pitch;                   // Pitch (1.0f is normal)
+
+    AudioEmitterComponent() : source(0), isPlaying(false), loop(false), volume(1.0f), pitch(1.0f) {
+        // Generate the OpenAL source
+        alGenSources(1, &source);
+        if (alGetError() != AL_NO_ERROR) {
+            std::cerr << "Failed to generate OpenAL source for AudioEmitterComponent!" << std::endl;
+        }
+    }
+
+    // Destructor to clean up the OpenAL source
+    ~AudioEmitterComponent() {
+        if (source != 0) {
+            alDeleteSources(1, &source);
+        }
+    }
 };
 
 #endif // ENTITY_H

@@ -5,6 +5,7 @@ set PREMAKE5="C:\Users\user\Downloads\premake-5.0.0-beta2-windows\premake5.exe"
 set MSBUILD="C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
 set SDL_DLL_PATH="vendors\lib\SDL2\SDL2.dll"
 set ASSIMP_DLL_PATH="vendors\lib\assimp\assimp.dll"
+set OPEN_AL_DLL_PATH="vendors\lib\openal\OpenAL32.dll"
 set OUTPUT_DIR="bin\Debug\Sandbox"
 set SANDBOX_EXE="%OUTPUT_DIR%\Sandbox.exe"
 
@@ -46,6 +47,14 @@ if exist %ASSIMP_DLL_PATH% (
     echo assimp.dll copied to %OUTPUT_DIR%.
 ) else (
     echo assimp.dll not found at %ASSIMP_DLL_PATH%.
+    exit /b 1
+)
+
+if exist %OPEN_AL_DLL_PATH% (
+    copy %OPEN_AL_DLL_PATH% %OUTPUT_DIR%
+    echo OpenAL32.dll copied to %OUTPUT_DIR%.
+) else (
+    echo OpenAL32.dll not found at %OPEN_AL_DLL_PATH%.
     exit /b 1
 )
 

@@ -11,6 +11,7 @@ enum ComponentType {
     Transform = 1 << 0,
     Shape_Rect = 1 << 1,
     MetaData = 1 << 2,
+    AudioEmitter = 1 << 3,
     // Add more components as needed
 };
 
@@ -20,6 +21,7 @@ struct EntityManager {
     std::unordered_map<entity_id, TransformComponent> transforms;
     std::unordered_map<entity_id, EntityMetaDataComponent> metadata;
     std::unordered_map<entity_id, Shape_RectComponent> shape_rects; //temp
+    std::unordered_map<entity_id, AudioEmitterComponent>audio_emitters;
 
     std::vector<entity_id> entities;
 
@@ -30,6 +32,8 @@ struct EntityManager {
     void AddTransformComponent(entity_id entity, const TransformComponent& transform);
     void AddShapeRectComponent(entity_id entity, const Shape_RectComponent& shapeRect);
     void AddEntityMetaDataComponent(entity_id entity, const EntityMetaDataComponent& metadata);
+    void AddAudioEmitterComponent(entity_id entity, const AudioEmitterComponent& emitter);
+
 
     uint32_t queryComponents(entity_id entity) const;
 

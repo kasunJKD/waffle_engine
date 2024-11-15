@@ -47,10 +47,20 @@ GLuint shader::get_shader(GLenum eShaderType, const char* filename)
     return shader;
 }
 
-GLuint shader::compile_shader(GLenum type, GLsizei nsources, const char **sources)
+GLuint shader::compile_shader(GLenum type, GLsizei nsources, const char** sources)
 {
+    if (sources == nullptr || nsources <= 0) {
+        std::cerr << "Error: Invalid shader sources or count!" << std::endl;
+        return 0;
+    }
+
     std::vector<GLsizei> srclens(nsources);
+
     for (GLsizei i = 0; i < nsources; ++i) {
+        if (sources[i] == nullptr) {
+            std::cerr << "Error: Shader source " << i << " is null!" << std::endl;
+            return 0; // Exit or handle the error
+        }
         srclens[i] = static_cast<GLsizei>(strlen(sources[i]));
     }
 
@@ -64,15 +74,14 @@ GLuint shader::compile_shader(GLenum type, GLsizei nsources, const char **source
         GLint len;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
         if (len > 1) {
-            std::unique_ptr<char[]> log(new char[len]);
-            glGetShaderInfoLog(shader, len, nullptr, log.get());
-            std::cerr << "Error compiling shader: " << log.get() << std::endl;
-            glDeleteShader(shader); // Clean up shader if compilation fails
-            return 0; // Return 0 to indicate failure
+            std::vector<char> log(len);
+            glGetShaderInfoLog(shader, len, nullptr, log.data());
+            std::cerr << "Shader compilation error: " << log.data() << std::endl;
         }
-        SDL_Log("Error compiling shader.\n");
+        glDeleteShader(shader);
+        return 0;
     }
-    SDL_Log("shader: %u", shader);
+
     return shader;
 }
 

@@ -1,4 +1,7 @@
 #include "sound.h"
+#include <iostream>
+
+using namespace std;
 
 Sound::Sound()
 {
@@ -14,7 +17,7 @@ Sound::~Sound()
     delete data;
 }
 
-ALenum Sound::GetOALFormat()
+ALenum Sound::GetOALFormat() const
 {
     if(GetBitRate() == 16)
     {
@@ -34,51 +37,70 @@ float Sound::GetLength () const
     return length;
 }
 
-void Sound::LoadFromWAV(string filename)
-{
-    ifstream file(filename.c_str(),ios::in|ios::binary);
-    if(!file)
-    {
-        cout << "Failed to load WAV file '" << filename << "' !" << endl;
+void Sound::LoadFromWAV(string filename) {
+    std::ifstream file(filename, std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open WAV file: " << filename << std::endl;
         return;
     }
 
-    string chunkName;
+    std::cout << "Loading WAV file: " << filename << std::endl;
+
+    std::string chunkName;
     unsigned int chunkSize;
 
-    while(!file.eof())
-    {
-        LoadWAVChunkInfo(file, chnunkName, chunkSize);
+    // Read through the file to process chunks
+    while (file.tellg() != -1) {
+        // Read the chunk name and size
+        LoadWAVChunkInfo(file, chunkName, chunkSize);
 
-        if(chunkName == "RIFF")
-        {
-            file.seekg(4, ios_base::cur);
-        }
-        else if (chunkName == "fmt ")
-        {
+        std::cout << "Chunk: " << chunkName << ", Size: " << chunkSize << std::endl;
+
+        if (chunkName == "RIFF") {
+            // Skip RIFF type (next 4 bytes)
+            file.seekg(4, std::ios_base::cur);
+        } else if (chunkName == "fmt ") {
             FMTCHUNK fmt;
+            if (chunkSize < sizeof(FMTCHUNK)) {
+                std::cerr << "Error: Invalid fmt chunk size." << std::endl;
+                break;
+            }
 
-            file.read((char*)&fmt, sizeof(FMTCHUNK));
-
+            file.read(reinterpret_cast<char*>(&fmt), sizeof(FMTCHUNK));
             bitRate = fmt.samp;
-            freqRate = (float)fmt.srate;
+            freqRate = static_cast<float>(fmt.srate);
             channels = fmt.channels;
-        }
-        else if(chunkName == "data")
-        {
+
+            std::cout << "Format Chunk: BitRate: " << bitRate
+                      << ", Frequency: " << freqRate
+                      << ", Channels: " << channels << std::endl;
+
+            // Skip any extra bytes in the fmt chunk
+            if (chunkSize > sizeof(FMTCHUNK)) {
+                file.seekg(chunkSize - sizeof(FMTCHUNK), std::ios_base::cur);
+            }
+        } else if (chunkName == "data") {
+            // Allocate memory and read the data chunk
             size = chunkSize;
             data = new char[size];
-            file.read((char*)&data, chunkSize);
-        }
-        else
-        {
-            file.seekg(chunkSize, ios_base::cur);
-        }
+            file.read(data, size);
 
+            std::cout << "Data Chunk Loaded. Size: " << size << " bytes." << std::endl;
+        } else {
+            // Unknown chunk; skip it
+            file.seekg(chunkSize, std::ios_base::cur);
+        }
     }
 
     file.close();
-    lenght = (float)size / (channels*freqRate*(bitRate/8.0f))*1000.0f;
+
+    // Calculate sound length
+    if (channels > 0 && freqRate > 0 && bitRate > 0) {
+        length = static_cast<float>(size) / (channels * freqRate * (bitRate / 8.0f)) * 1000.0f;
+        std::cout << "Sound Length: " << length << " ms" << std::endl;
+    } else {
+        std::cerr << "Error: Failed to calculate sound length. Invalid WAV format." << std::endl;
+    }
 }
 
 void Sound::LoadWAVChunkInfo(ifstream &file,
@@ -110,6 +132,10 @@ int Sound::GetChannels() const {
 
 ALuint Sound::GetBuffer() const {
     return buffer;
+}
+
+int Sound::GetSize() const {
+    return size;
 }
 
 

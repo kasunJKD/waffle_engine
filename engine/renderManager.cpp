@@ -86,7 +86,7 @@ void quad_render(const TransformComponent& transform, const Shape_RectComponent&
 
     // Calculate model matrix for the quad
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(transform.position, 0.0f));
+    model = glm::translate(model, glm::vec3(transform.position));
     model = glm::rotate(model, glm::radians(transform.rotation), glm::vec3(0.0f, 0.0f, 1.0f));
     model = glm::scale(model, glm::vec3(transform.scale * shape.size, 1.0f));
 

@@ -15,6 +15,8 @@
 #include <fstream>
 #include <AL/al.h>
 
+using namespace std;
+
 //https://research.ncl.ac.uk/game/mastersdegree/workshops/audio/Sound%20Workshop.pdf
 struct FMTCHUNK
 {
@@ -28,7 +30,7 @@ struct FMTCHUNK
 
 struct Sound {
     char*   data;
-    float   lenght;
+    float   length;
     int     bitRate;
     float   freqRate;
     int     size;

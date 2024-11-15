@@ -30,6 +30,9 @@ uint32_t EntityManager::queryComponents(entity_id entity) const {
     if (metadata.find(entity) != metadata.end()) {
         componentMask |= ComponentType::MetaData;
     }
+    if (audio_emitters.find(entity) != audio_emitters.end()) {
+        componentMask |= ComponentType::AudioEmitter;
+    }
 
     return componentMask;
 }
@@ -55,3 +58,9 @@ void EntityManager::AddEntityMetaDataComponent(entity_id entity, const EntityMet
 {
     metadata[entity] = metadata_;
 }
+
+void EntityManager::AddAudioEmitterComponent(entity_id entity, const AudioEmitterComponent& emitter)
+{
+    audio_emitters[entity] = emitter;
+}
+
