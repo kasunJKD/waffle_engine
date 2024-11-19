@@ -3,6 +3,22 @@
 #include <iostream>
 #include <cmath>
 
+void checkOpenALError(const std::string& context) {
+    ALenum error = alGetError();
+    if (error != AL_NO_ERROR) {
+        std::cerr << "OpenAL Error in " << context << ": ";
+        switch (error) {
+        case AL_INVALID_NAME: std::cerr << "AL_INVALID_NAME"; break;
+        case AL_INVALID_ENUM: std::cerr << "AL_INVALID_ENUM"; break;
+        case AL_INVALID_VALUE: std::cerr << "AL_INVALID_VALUE"; break;
+        case AL_INVALID_OPERATION: std::cerr << "AL_INVALID_OPERATION"; break;
+        case AL_OUT_OF_MEMORY: std::cerr << "AL_OUT_OF_MEMORY"; break;
+        default: std::cerr << "Unknown Error (" << error << ")"; break;
+        }
+        std::cerr << std::endl;
+    }
+}
+
 std::map<std::string, Sound*> SoundManager::sounds;
 
 void SoundManager::AddSound(string name)
@@ -73,20 +89,23 @@ void SoundSystem::initialise(SoundManager* sm, EntityManager* em) {
         return;
     }
 
-    alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
-
     std::cout << "SoundSystem initialized." << std::endl;
 }
 
-void checkOpenALError(const std::string& context) {
-    ALenum error = alGetError();
-    if (error != AL_NO_ERROR) {
-        std::cerr << "OpenAL Error in " << context << ": " << error << std::endl;
-    }
+void SoundSystem::initializeListener() {
+    // Set listener's position and orientation
+    ALfloat listenerPos[] = { 0.0f, 0.0f, 0.0f };
+    ALfloat listenerVel[] = { 0.0f, 0.0f, 0.0f };
+    ALfloat listenerOri[] = { 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f }; // forward and up
+
+    alListenerfv(AL_POSITION, listenerPos);
+    alListenerfv(AL_VELOCITY, listenerVel);
+    alListenerfv(AL_ORIENTATION, listenerOri);
+    checkOpenALError("initializeListener");
 }
 
 void SoundSystem::update(float deltaTime) {
-    updateListener();
+    //updateListener();
 
     // Update timed sounds
     for (auto it = timedSounds.begin(); it != timedSounds.end();) {
@@ -125,45 +144,49 @@ void SoundSystem::update(float deltaTime) {
         AudioEmitterComponent& emitter = it->second;
 
         // Retrieve sound from SoundManager
-        Sound* sound = soundManager->GetSound(emitter.soundName);
-        if (!sound) {
-            std::cerr << "Sound not found: " << emitter.soundName << std::endl;
-            continue;
-        }
+        // Sound* sound = soundManager->GetSound(emitter.soundName);
+        // if (!sound) {
+        //     std::cerr << "Sound not found: " << emitter.soundName << std::endl;
+        //     continue;
+        // }
 
-        // Attach buffer if not already attached
-        ALint bufferAttached;
-        alGetSourcei(emitter.source, AL_BUFFER, &bufferAttached);
-        if (bufferAttached != static_cast<ALint>(sound->GetBuffer())) {
-            alSourcei(emitter.source, AL_BUFFER, sound->GetBuffer());
-        }
+        // alSource3f(emitter.source, AL_POSITION, 0,0,0);
+        // alSource3f(emitter.source, AL_VELOCITY, 0,0,0);
+        // alSourcef(emitter.source, AL_GAIN, 1.0f);
+        // alSourcef(emitter.source, AL_PITCH, 1);
+        // alSourcei(emitter.source, AL_LOOPING, emitter.loop ? AL_TRUE : AL_FALSE);
+        // alSourcei(emitter.source, AL_BUFFER, sound->GetBuffer());
 
-         if (entityManager->transforms.find(entityID) != entityManager->transforms.end()) {
-            TransformComponent& transform = entityManager->transforms[entityID];
-            ALfloat sourcePos[] = { transform.position.x, transform.position.y, transform.position.z };
-            alSourcefv(emitter.source, AL_POSITION, sourcePos);
+        // alSourcePlay(emitter.source);
+        //checkOpenALError("alSourcePlay");
 
-            std::cout << "Emitter Position: ("
-                      << sourcePos[0] << ", " << sourcePos[1] << ", " << sourcePos[2]
-                      << ")" << std::endl;
-        }
+        // ALint state;
+        //  if (emitter.isPlaying) {
+        //     state = AL_PLAYING;
+        // } else if (!emitter.isPlaying && state == AL_PLAYING) {
+        //     alSourcePause(emitter.source);
+        // }
 
-        // Set OpenAL source properties
-        alSourcef(emitter.source, AL_GAIN, emitter.volume);
-        alSourcef(emitter.source, AL_PITCH, emitter.pitch);
-        alSourcei(emitter.source, AL_LOOPING, emitter.loop ? AL_TRUE : AL_FALSE);
+        // // Manage playback state
+        // if(state == AL_PLAYING){
+        //      alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
+        // }
 
-
-        // Manage playback state
+         // Check if the sound is playing
         ALint state;
         alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
-
-        if (emitter.isPlaying && state != AL_PLAYING) {
+        checkOpenALError("alGetSourcei");
+        // if (emitter.isPlaying) {
+        //     state = AL_PLAYING;
+        //     alSourcePlay(emitter.source);
+        // }
+        // //checkOpenALError("alGetSourcei");
+        //checkOpenALError("alSourcePlay");
+        if (state != AL_PLAYING) {
             alSourcePlay(emitter.source);
             checkOpenALError("alSourcePlay");
-        } else if (!emitter.isPlaying && state == AL_PLAYING) {
-            alSourcePause(emitter.source);
         }
+
     }
 }
 
@@ -261,4 +284,33 @@ void SoundSystem::fadeSound(const std::string& soundName, float targetVolume, fl
 
 void SoundSystem::addTimedSound(const std::string& soundName, float delay, bool loop, float volume, float pitch) {
     timedSounds.push_back({ soundName, delay, loop, volume, pitch });
+}
+
+void SoundSystem::GenAndBindOpenALOptions(Sound* sound, AudioEmitterComponent& comp)
+{
+    alGenSources(1, &comp.source);
+    if (alGetError() != AL_NO_ERROR) {
+        std::cerr << "Failed to generate OpenAL source!" << std::endl;
+        return;
+    }
+
+    // Attach buffer and set source properties
+    alSourcei(comp.source, AL_BUFFER, sound->GetBuffer());
+    if (alGetError() != AL_NO_ERROR) {
+        std::cerr << "Failed to attach buffer to source!" << std::endl;
+        alDeleteSources(1, &comp.source); // Clean up the source
+        return;
+    }
+
+    alSource3f(comp.source, AL_POSITION, 0.0f, 0.0f, 0.0f);
+    alSource3f(comp.source, AL_VELOCITY, 0.0f, 0.0f, 0.0f);
+    alSourcef(comp.source, AL_GAIN, comp.volume);
+    alSourcef(comp.source, AL_PITCH, comp.pitch);
+    alSourcei(comp.source, AL_LOOPING, comp.loop ? AL_TRUE : AL_FALSE);
+
+    // Check for errors after setting source properties
+    if (alGetError() != AL_NO_ERROR) {
+        std::cerr << "Error occurred while setting OpenAL source properties!" << std::endl;
+        alDeleteSources(1, &comp.source); // Clean up the source
+    }
 }

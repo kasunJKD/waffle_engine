@@ -5,6 +5,33 @@
 
 #include <iostream>
 
+#include "window.h"
+#include "renderManager.h"
+#include "entityManager.h"
+#include "soundSystem.h"
+
+#include <iostream>
+
+void setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, SoundSystem& soundSystem) {
+    Sound* sound = soundManager.GetSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav");
+    if (!sound) {
+        std::cerr << "Sound not found!" << std::endl;
+        return;
+    }
+
+    entity_id id = entityManager.CreateEntity();
+    AudioEmitterComponent comp;
+    comp.soundName = "D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav";
+    comp.isPlaying = false;
+    comp.loop = true;         // Looping flag
+    comp.volume = 1.0f;              // Volume (0.0f to 1.0f)
+    comp.pitch = 1.0f;
+
+    soundSystem.GenAndBindOpenALOptions(sound, comp);
+
+    entityManager.AddAudioEmitterComponent(id, comp);
+}
+
 entity_id initquad(EntityManager& entityManager)
 {
     entity_id id = entityManager.CreateEntity();
@@ -28,37 +55,6 @@ entity_id initquad(EntityManager& entityManager)
     return id;
 }
 
-entity_id createSoundListener(EntityManager& entityManager)
-{
-    entity_id listener = entityManager.CreateEntity();
-    TransformComponent listenerTransform;
-    listenerTransform.position = glm::vec3(0.0f, 0.0f, 0.0f);
-    listenerTransform.forward = glm::vec3(0.0f, 0.0f, -1.0f); // Default forward direction
-    listenerTransform.up = glm::vec3(0.0f, 1.0f, 0.0f);       // Default up direction
-    entityManager.AddTransformComponent(listener, listenerTransform);
-    return listener;
-}
-
-void createSoundEmitterTest(EntityManager& entityManager)
-{
-    entity_id emitter = entityManager.CreateEntity();
-
-    // Set emitter position
-    TransformComponent emitterTransform;
-    emitterTransform.position = glm::vec3(0.0f, 0.0f, -1.0f); // Place emitter 5 units in front of listener
-    entityManager.AddTransformComponent(emitter, emitterTransform);
-
-    // Attach audio emitter component
-    AudioEmitterComponent emitterAudio;
-    emitterAudio.soundName = "D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\gameover.wav";
-    emitterAudio.isPlaying = true;
-    emitterAudio.loop = true;
-    emitterAudio.volume = 1.0f;
-    emitterAudio.pitch = 1.0f;
-    entityManager.AddAudioEmitterComponent(emitter, emitterAudio);
-}
-
-//@TODO refactor to a time.h
 uint32_t lastTicks = SDL_GetTicks();
 
 float calculateDeltaTime() {
@@ -73,23 +69,25 @@ int main(int argc, char* argv[]) {
     EntityManager entityManager;
     RenderManager renderManager;
 
-    //Sounds
+    // Sounds
     SoundManager soundManager;
     SoundSystem soundSystem;
     soundSystem.initialise(&soundManager, &entityManager);
-    soundManager.AddSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\gameover.wav");
 
-    // Initialize the window with a title, width, and height
+    // Load sound
+    soundManager.AddSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav");
+
+    // Initialize the window
     if (!window.init("Sandbox", 800, 600)) {
         std::cerr << "Failed to initialize window." << std::endl;
         return -1;
     }
 
-    soundSystem.listenerEntity = createSoundListener(entityManager);
-    createSoundEmitterTest(entityManager);
-
     renderManager.init();
     initquad(entityManager);
+
+    soundSystem.initializeListener();
+    setupSoundEntity(soundManager, entityManager, soundSystem);
 
     // Main loop
     bool isRunning = true;
@@ -97,11 +95,11 @@ int main(int argc, char* argv[]) {
 
     while (isRunning) {
         float dt = calculateDeltaTime();
-        // Update the SoundSystem
+
         soundSystem.update(dt);
+
         // Poll for events
         while (SDL_PollEvent(&event)) {
-
             if (event.type == SDL_QUIT) {
                 isRunning = false; // Exit if the window is closed
             } else if (event.type == SDL_WINDOWEVENT) {
@@ -133,4 +131,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-

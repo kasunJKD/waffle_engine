@@ -43,5 +43,5 @@ project("Sandbox")
         "imgui/backends",
         "vendors/include/assimp",
     })
-    links({ "Engine", "SDL2", "SDL2main" }) -- Include glad here
-    libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp" })
+    links({ "Engine", "SDL2", "SDL2main","OpenAL32" }) -- Include glad here
+    libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp", "vendors/lib/openal" })

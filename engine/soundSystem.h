@@ -8,6 +8,7 @@
 #include "sound.h" // For Sound
 #include "entityManager.h" // For EntityManager and entity_id
 
+
 struct SoundManager
 {
     static map<string, Sound*> sounds;
@@ -48,7 +49,10 @@ struct SoundSystem {
 
     void initialise(SoundManager* soundManager, EntityManager* entityManager);
     void update(float deltaTime);
+
     void updateListener();
+    void initializeListener();
+
     void clean();
 
     void playSound(const std::string& soundName, bool loop = false, float volume = 1.0f, float pitch = 1.0f);
@@ -57,5 +61,7 @@ struct SoundSystem {
 
     void addTimedSound(const std::string& soundName, float delay, bool loop = false, float volume = 1.0f, float pitch = 1.0f);
     void fadeSound(const std::string& soundName, float targetVolume, float duration);
+
+    void GenAndBindOpenALOptions(Sound* sound, AudioEmitterComponent& comp);
 };
 

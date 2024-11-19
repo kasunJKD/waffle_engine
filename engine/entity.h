@@ -45,20 +45,20 @@ struct AudioEmitterComponent
     float volume;                  // Volume (0.0f to 1.0f)
     float pitch;                   // Pitch (1.0f is normal)
 
-    AudioEmitterComponent() : source(0), isPlaying(false), loop(false), volume(1.0f), pitch(1.0f) {
-        // Generate the OpenAL source
-        alGenSources(1, &source);
-        if (alGetError() != AL_NO_ERROR) {
-            std::cerr << "Failed to generate OpenAL source for AudioEmitterComponent!" << std::endl;
-        }
-    }
+    // AudioEmitterComponent() : source(0), isPlaying(false), loop(false), volume(1.0f), pitch(1.0f) {
+    //     // Generate the OpenAL source
+    //     alGenSources(1, &source);
+    //     if (alGetError() != AL_NO_ERROR) {
+    //         std::cerr << "Failed to generate OpenAL source for AudioEmitterComponent!" << std::endl;
+    //     }
+    // }
 
-    // Destructor to clean up the OpenAL source
-    ~AudioEmitterComponent() {
-        if (source != 0) {
-            alDeleteSources(1, &source);
-        }
-    }
+    // // Destructor to clean up the OpenAL source
+    // ~AudioEmitterComponent() {
+    //     if (source != 0) {
+    //         alDeleteSources(1, &source);
+    //     }
+    // }
 };
 
 #endif // ENTITY_H
