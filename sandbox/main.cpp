@@ -2,8 +2,27 @@
 #include "renderManager.h"
 #include "entityManager.h"
 #include "soundSystem.h"
+#include "input.h"
 
 #include <iostream>
+
+const uint32_t TARGET_FPS = 60;
+const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; // Time per frame in milliseconds
+
+//@todo move this to another .h
+void updateMovableEntities(EntityManager& entityManager, InputManager& inputManager, float deltaTime) {
+    glm::vec3 movementDirection = inputManager.getMovementDirection();
+
+    for (auto it = entityManager.movables.begin(); it != entityManager.movables.end(); ++it) {
+        entity_id entityID = it->first; // Access the entity ID
+        MovableComponent& movable = it->second; // Access the MovableComponent
+
+        if (entityManager.transforms.find(entityID) != entityManager.transforms.end()) {
+            auto& transform = entityManager.transforms[entityID];
+            transform.position += movementDirection * movable.speed * deltaTime;
+        }
+    }
+}
 
 void setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, SoundSystem& soundSystem) {
     Sound* sound = soundManager.GetSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav");
@@ -16,8 +35,8 @@ void setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, 
     AudioEmitterComponent comp;
     comp.soundName = "D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav";
     comp.isPlaying = false;
-    comp.loop = true;         // Looping flag
-    comp.volume = 1.0f;              // Volume (0.0f to 1.0f)
+    comp.loop = true;
+    comp.volume = 1.0f;
     comp.pitch = 1.0f;
 
     soundSystem.GenAndBindOpenALOptions(sound, comp);
@@ -44,6 +63,7 @@ entity_id initquad(EntityManager& entityManager)
         {1.0f, 1.0f}       // scale (x, y)
     };
     entityManager.AddTransformComponent(id, transform);
+    entityManager.AddMovableComponent(id, { 100.0f, glm::vec3(0.0f) });
 
     return id;
 }
@@ -61,6 +81,7 @@ int main(int argc, char* argv[]) {
     Window window;
     EntityManager entityManager;
     RenderManager renderManager;
+    InputManager inputManager;
 
     // Sounds
     SoundManager soundManager;
@@ -76,7 +97,9 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    inputManager.init();
     renderManager.init();
+
     initquad(entityManager);
 
     soundSystem.initializeListener();
@@ -84,25 +107,30 @@ int main(int argc, char* argv[]) {
 
     // Main loop
     bool isRunning = true;
-    SDL_Event event;
 
     while (isRunning) {
+        uint32_t frameStart = SDL_GetTicks();
+
         float dt = calculateDeltaTime();
+
+        inputManager.update(isRunning);
+        if (!isRunning) break;
+        updateMovableEntities(entityManager, inputManager, dt);
 
         soundSystem.update(dt);
 
-        // Poll for events
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                isRunning = false; // Exit if the window is closed
-            } else if (event.type == SDL_WINDOWEVENT) {
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    int newWidth = event.window.data1;
-                    int newHeight = event.window.data2;
-                    window.resize(newWidth, newHeight); // Update viewport on resize
-                }
-            }
-        }
+        // // Poll for events
+        // while (SDL_PollEvent(&event)) {
+        //     if (event.type == SDL_QUIT) {
+        //         isRunning = false; // Exit if the window is closed
+        //     } else if (event.type == SDL_WINDOWEVENT) {
+        //         if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+        //             int newWidth = event.window.data1;
+        //             int newHeight = event.window.data2;
+        //             window.resize(newWidth, newHeight); // Update viewport on resize
+        //         }
+        //     }
+        // }
 
         // Clear the screen
         glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
@@ -112,6 +140,12 @@ int main(int argc, char* argv[]) {
 
         // Swap buffers to display the current frame
         window.swapBuffers();
+
+        // Frame limiting
+        uint32_t frameTime = SDL_GetTicks() - frameStart;
+        if (frameTime < FRAME_DELAY) {
+            SDL_Delay(FRAME_DELAY - frameTime);
+        }
     }
 
     // Cleanup resources before exiting

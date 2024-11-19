@@ -33,6 +33,9 @@ uint32_t EntityManager::queryComponents(entity_id entity) const {
     if (audio_emitters.find(entity) != audio_emitters.end()) {
         componentMask |= ComponentType::AudioEmitter;
     }
+    if (movables.find(entity) != movables.end()) {
+        componentMask |= ComponentType::Movables;
+    }
 
     return componentMask;
 }
@@ -63,4 +66,10 @@ void EntityManager::AddAudioEmitterComponent(entity_id entity, const AudioEmitte
 {
     audio_emitters[entity] = emitter;
 }
+
+void EntityManager::AddMovableComponent(entity_id entity, const MovableComponent& movable)
+{
+    movables[entity] = movable;
+}
+
 
