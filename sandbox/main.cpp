@@ -5,13 +5,6 @@
 
 #include <iostream>
 
-#include "window.h"
-#include "renderManager.h"
-#include "entityManager.h"
-#include "soundSystem.h"
-
-#include <iostream>
-
 void setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, SoundSystem& soundSystem) {
     Sound* sound = soundManager.GetSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav");
     if (!sound) {
