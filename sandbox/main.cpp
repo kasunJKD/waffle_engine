@@ -3,6 +3,7 @@
 #include "entityManager.h"
 #include "soundSystem.h"
 #include "input.h"
+#include "sceneManager.h"
 
 #include <iostream>
 
@@ -24,17 +25,17 @@ void updateMovableEntities(EntityManager& entityManager, InputManager& inputMana
     }
 }
 
-void setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, SoundSystem& soundSystem) {
+entity_id setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, SoundSystem& soundSystem) {
     Sound* sound = soundManager.GetSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav");
     if (!sound) {
         std::cerr << "Sound not found!" << std::endl;
-        return;
+        return -1;
     }
 
     entity_id id = entityManager.CreateEntity();
     AudioEmitterComponent comp;
     comp.soundName = "D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav";
-    comp.isPlaying = false;
+    comp.isPlaying = true;
     comp.loop = true;
     comp.volume = 1.0f;
     comp.pitch = 1.0f;
@@ -42,6 +43,8 @@ void setupSoundEntity(SoundManager& soundManager, EntityManager& entityManager, 
     soundSystem.GenAndBindOpenALOptions(sound, comp);
 
     entityManager.AddAudioEmitterComponent(id, comp);
+
+    return id;
 }
 
 entity_id initquad(EntityManager& entityManager)
@@ -79,7 +82,15 @@ float calculateDeltaTime() {
 
 int main(int argc, char* argv[]) {
     Window window;
+    
     EntityManager entityManager;
+    
+    SceneManager sceneManager(&entityManager);
+    sceneManager.createScene("Default");
+    sceneManager.loadScene("Default");
+    sceneManager.createScene("MainUI");
+    //sceneManager.loadScene("MainUI");
+
     RenderManager renderManager;
     InputManager inputManager;
 
@@ -100,10 +111,12 @@ int main(int argc, char* argv[]) {
     inputManager.init();
     renderManager.init();
 
-    initquad(entityManager);
+    entity_id id = initquad(entityManager);
+    sceneManager.addEntityToScene(id);
 
     soundSystem.initializeListener();
-    setupSoundEntity(soundManager, entityManager, soundSystem);
+    entity_id soundid = setupSoundEntity(soundManager, entityManager, soundSystem);
+    sceneManager.addEntityToScene(soundid);
 
     // Main loop
     bool isRunning = true;
@@ -117,26 +130,13 @@ int main(int argc, char* argv[]) {
         if (!isRunning) break;
         updateMovableEntities(entityManager, inputManager, dt);
 
-        soundSystem.update(dt);
-
-        // // Poll for events
-        // while (SDL_PollEvent(&event)) {
-        //     if (event.type == SDL_QUIT) {
-        //         isRunning = false; // Exit if the window is closed
-        //     } else if (event.type == SDL_WINDOWEVENT) {
-        //         if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-        //             int newWidth = event.window.data1;
-        //             int newHeight = event.window.data2;
-        //             window.resize(newWidth, newHeight); // Update viewport on resize
-        //         }
-        //     }
-        // }
+        soundSystem.update(dt, sceneManager);
 
         // Clear the screen
         glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        renderManager.update(entityManager);
+        renderManager.update(entityManager, sceneManager);
 
         // Swap buffers to display the current frame
         window.swapBuffers();

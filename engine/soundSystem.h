@@ -7,6 +7,7 @@
 #include <AL/alc.h>
 #include "sound.h" // For Sound
 #include "entityManager.h" // For EntityManager and entity_id
+#include "sceneManager.h"
 
 
 struct SoundManager
@@ -48,7 +49,7 @@ struct SoundSystem {
     ~SoundSystem();
 
     void initialise(SoundManager* soundManager, EntityManager* entityManager);
-    void update(float deltaTime);
+    void update(float deltaTime, SceneManager& sceneManager);
 
     void updateListener();
     void initializeListener();

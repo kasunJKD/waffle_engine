@@ -1,6 +1,7 @@
 #pragma once
 
 #include "entityManager.h"
+#include "sceneManager.h"
 
 #include <glad/glad.h>
 
@@ -10,7 +11,7 @@ struct RenderManager
     GLuint VAO, VBO, EBO;
 
     void init();
-    void update(const EntityManager& entityManager);
+    void update(const EntityManager& entityManager, const SceneManager& sceneManager);
     void cleanUp();
 };
 

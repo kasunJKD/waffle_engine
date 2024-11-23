@@ -104,9 +104,93 @@ void SoundSystem::initializeListener() {
     checkOpenALError("initializeListener");
 }
 
-void SoundSystem::update(float deltaTime) {
-    //updateListener();
+// void SoundSystem::update(float deltaTime, SceneManager &sceneManager) {
+//     //updateListener();
 
+//     // Update timed sounds
+//     for (auto it = timedSounds.begin(); it != timedSounds.end();) {
+//         it->timeRemaining -= deltaTime;
+//         if (it->timeRemaining <= 0.0f) {
+//             playSound(it->soundName, it->loop, it->volume, it->pitch);
+//             it = timedSounds.erase(it);
+//         } else {
+//             ++it;
+//         }
+//     }
+
+//     // Update fading sounds
+//     for (auto it = fadingSounds.begin(); it != fadingSounds.end();) {
+//         ALfloat currentVolume;
+//         alGetSourcef(it->source, AL_GAIN, &currentVolume);
+
+//         float step = it->fadeSpeed * deltaTime;
+//         if (currentVolume < it->targetVolume) {
+//             currentVolume = std::min(it->targetVolume, currentVolume + step);
+//         } else {
+//             currentVolume = std::max(it->targetVolume, currentVolume - step);
+//         }
+//         alSourcef(it->source, AL_GAIN, currentVolume);
+
+//         if (std::abs(currentVolume - it->targetVolume) < 0.01f) {
+//             it = fadingSounds.erase(it);
+//         } else {
+//             ++it;
+//         }
+//     }
+
+//     // Iterate through entities with AudioEmitterComponent
+//     for (auto it = entityManager->audio_emitters.begin(); it != entityManager->audio_emitters.end(); ++it) {
+//         entity_id entityID = it->first;
+//         AudioEmitterComponent& emitter = it->second;
+
+//         // Retrieve sound from SoundManager
+//         // Sound* sound = soundManager->GetSound(emitter.soundName);
+//         // if (!sound) {
+//         //     std::cerr << "Sound not found: " << emitter.soundName << std::endl;
+//         //     continue;
+//         // }
+
+//         // alSource3f(emitter.source, AL_POSITION, 0,0,0);
+//         // alSource3f(emitter.source, AL_VELOCITY, 0,0,0);
+//         // alSourcef(emitter.source, AL_GAIN, 1.0f);
+//         // alSourcef(emitter.source, AL_PITCH, 1);
+//         // alSourcei(emitter.source, AL_LOOPING, emitter.loop ? AL_TRUE : AL_FALSE);
+//         // alSourcei(emitter.source, AL_BUFFER, sound->GetBuffer());
+
+//         // alSourcePlay(emitter.source);
+//         //checkOpenALError("alSourcePlay");
+
+//         // ALint state;
+//         //  if (emitter.isPlaying) {
+//         //     state = AL_PLAYING;
+//         // } else if (!emitter.isPlaying && state == AL_PLAYING) {
+//         //     alSourcePause(emitter.source);
+//         // }
+
+//         // // Manage playback state
+//         // if(state == AL_PLAYING){
+//         //      alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
+//         // }
+
+//          // Check if the sound is playing
+//         ALint state;
+//         alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
+//         checkOpenALError("alGetSourcei");
+//         // if (emitter.isPlaying) {
+//         //     state = AL_PLAYING;
+//         //     alSourcePlay(emitter.source);
+//         // }
+//         // //checkOpenALError("alGetSourcei");
+//         //checkOpenALError("alSourcePlay");
+//         if (state != AL_PLAYING) {
+//             alSourcePlay(emitter.source);
+//             checkOpenALError("alSourcePlay");
+//         }
+
+//     }
+// }
+
+void SoundSystem::update(float deltaTime, SceneManager& sceneManager) {
     // Update timed sounds
     for (auto it = timedSounds.begin(); it != timedSounds.end();) {
         it->timeRemaining -= deltaTime;
@@ -138,57 +222,34 @@ void SoundSystem::update(float deltaTime) {
         }
     }
 
-    // Iterate through entities with AudioEmitterComponent
-    for (auto it = entityManager->audio_emitters.begin(); it != entityManager->audio_emitters.end(); ++it) {
-        entity_id entityID = it->first;
-        AudioEmitterComponent& emitter = it->second;
+    // Get the current scene from the SceneManager
+    Scene* currentScene = sceneManager.getCurrentScene();
+    if (!currentScene) {
+        std::cerr << "No active scene. Skipping sound updates." << std::endl;
+        return;
+    }
 
-        // Retrieve sound from SoundManager
-        // Sound* sound = soundManager->GetSound(emitter.soundName);
-        // if (!sound) {
-        //     std::cerr << "Sound not found: " << emitter.soundName << std::endl;
-        //     continue;
-        // }
+    // Iterate through entities in the current scene
+    for (entity_id entityID : currentScene->entities) {
+        if (entityManager->audio_emitters.find(entityID) != entityManager->audio_emitters.end()) {
+            AudioEmitterComponent& emitter = entityManager->audio_emitters[entityID];
 
-        // alSource3f(emitter.source, AL_POSITION, 0,0,0);
-        // alSource3f(emitter.source, AL_VELOCITY, 0,0,0);
-        // alSourcef(emitter.source, AL_GAIN, 1.0f);
-        // alSourcef(emitter.source, AL_PITCH, 1);
-        // alSourcei(emitter.source, AL_LOOPING, emitter.loop ? AL_TRUE : AL_FALSE);
-        // alSourcei(emitter.source, AL_BUFFER, sound->GetBuffer());
+            // Check and update the sound playback state
+            ALint state;
+            alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
+            checkOpenALError("alGetSourcei");
 
-        // alSourcePlay(emitter.source);
-        //checkOpenALError("alSourcePlay");
-
-        // ALint state;
-        //  if (emitter.isPlaying) {
-        //     state = AL_PLAYING;
-        // } else if (!emitter.isPlaying && state == AL_PLAYING) {
-        //     alSourcePause(emitter.source);
-        // }
-
-        // // Manage playback state
-        // if(state == AL_PLAYING){
-        //      alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
-        // }
-
-         // Check if the sound is playing
-        ALint state;
-        alGetSourcei(emitter.source, AL_SOURCE_STATE, &state);
-        checkOpenALError("alGetSourcei");
-        // if (emitter.isPlaying) {
-        //     state = AL_PLAYING;
-        //     alSourcePlay(emitter.source);
-        // }
-        // //checkOpenALError("alGetSourcei");
-        //checkOpenALError("alSourcePlay");
-        if (state != AL_PLAYING) {
-            alSourcePlay(emitter.source);
-            checkOpenALError("alSourcePlay");
+            if (emitter.isPlaying && state != AL_PLAYING) {
+                alSourcePlay(emitter.source);
+                checkOpenALError("alSourcePlay");
+            } else if (!emitter.isPlaying && state == AL_PLAYING) {
+                alSourcePause(emitter.source);
+                checkOpenALError("alSourcePause");
+            }
         }
-
     }
 }
+
 
 void SoundSystem::clean() {
     // Clean up OpenAL resources

@@ -1,0 +1,43 @@
+{
+    "entities": [
+        {
+            "entity_id": 1,
+            "shape_rect": {
+                "color": [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ],
+                "filled": true,
+                "size": [
+                    100.0,
+                    50.0
+                ]
+            },
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": 0.0,
+                "scale": [
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "audio_emitter": {
+                "isPlaying": true,
+                "loop": true,
+                "pitch": 1.0,
+                "soundName": "D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav",
+                "volume": 1.0
+            },
+            "entity_id": 2
+        }
+    ],
+    "name": "Default"
+}

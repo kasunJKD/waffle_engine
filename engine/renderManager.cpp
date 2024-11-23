@@ -12,11 +12,11 @@ void RenderManager::init()
     quad_init(VAO, VBO, EBO);
 }
 
-void RenderManager::update(const EntityManager& entityManager) {
+void RenderManager::update(const EntityManager& entityManager, const SceneManager& sceneManager) {
     glUseProgram(basicShader);
     glBindVertexArray(VAO);
 
-    for (const entity_id entity : entityManager.entities) { // Use entity_id directly
+    for (const entity_id entity : sceneManager.currentScene->entities) { // Use entity_id directly
         if (entityManager.metadata.at(entity).active == false) continue;  // Skip inactive entities
 
         // Query the components present for this entity
