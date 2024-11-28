@@ -36,6 +36,7 @@ files({
 includedirs({
 	"engine",
 	"sandbox",
+	"vendors",
 	"vendors/include", -- Include SDL2, GLAD, and other dependencies
 	"vendors/include/SDL2",
 	"vendors/include/glad/include",

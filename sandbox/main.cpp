@@ -1,4 +1,5 @@
 #include "window.h"
+#include "resourceManager.h"
 #include "renderManager.h"
 #include "entityManager.h"
 #include "soundSystem.h"
@@ -82,6 +83,10 @@ float calculateDeltaTime() {
 
 int main(int argc, char* argv[]) {
     Window window;
+
+    ResourceManager resourceManager;
+    // Add a texture resource
+    resourceManager.addResource("assets/container.png", "container", TEXTURE);
     
     EntityManager entityManager;
     
@@ -152,6 +157,7 @@ int main(int argc, char* argv[]) {
     renderManager.cleanUp();
     soundSystem.clean();
     soundManager.RemoveSounds();
+    resourceManager.clearResources();
     window.cleanUp();
 
     SDL_Quit(); // Close SDL
