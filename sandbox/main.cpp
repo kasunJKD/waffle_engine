@@ -5,8 +5,14 @@
 #include "soundSystem.h"
 #include "input.h"
 #include "sceneManager.h"
+#include "tiles.h"
 
 #include <iostream>
+
+#define SCREENSIZE_WIDTH 960
+#define SCREENSIZE_HEIGTH 540
+#define GAME_WIDTH 512
+#define GAME_HEIGTH 288
 
 const uint32_t TARGET_FPS = 60;
 const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; // Time per frame in milliseconds
@@ -86,7 +92,6 @@ int main(int argc, char* argv[]) {
 
     ResourceManager resourceManager;
     // Add a texture resource
-    resourceManager.addResource("assets/container.png", "container", TEXTURE);
     
     EntityManager entityManager;
     
@@ -96,7 +101,7 @@ int main(int argc, char* argv[]) {
     sceneManager.createScene("MainUI");
     //sceneManager.loadScene("MainUI");
 
-    RenderManager renderManager;
+    RenderManager renderManager; 
     InputManager inputManager;
 
     // Sounds
@@ -108,7 +113,7 @@ int main(int argc, char* argv[]) {
     soundManager.AddSound("D:\\Personal\\waffle_engine\\bin\\Debug\\Sandbox\\sounds\\sample-3s.wav");
 
     // Initialize the window
-    if (!window.init("Sandbox", 800, 600)) {
+    if (!window.init("Sandbox", SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH)) {
         std::cerr << "Failed to initialize window." << std::endl;
         return -1;
     }
@@ -123,6 +128,37 @@ int main(int argc, char* argv[]) {
     entity_id soundid = setupSoundEntity(soundManager, entityManager, soundSystem);
     sceneManager.addEntityToScene(soundid);
 
+    resourceManager.addResource("assets/tiled/testSpritesheet.png", "spritesheet", TEXTURE);
+     
+
+    GLuint VAO2, shaderProgram2;
+
+    // Initialize VAO and Shader Program
+    std::tie(VAO2, shaderProgram2) = renderTileInit();
+glm::mat4 projection = glm::ortho(
+        0.0f, (float)GAME_WIDTH,    // left, right
+        (float)GAME_HEIGTH, 0.0f,   // bottom, top
+        -1.0f, 1.0f                  // near, far
+    ); 
+    // 5) Set that projection once (or each frame)
+    glUseProgram(shaderProgram2);
+    GLint projLoc = glGetUniformLocation(shaderProgram2, "projection");
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+GLuint textureID2 = resourceManager.getResource<GLuint>("spritesheet", ResourceType::TEXTURE);
+
+    auto sprites = initializeSprites();
+
+     std::vector<Layer> layers = parseTiledJSON("assets/tiled/testmapAlldata.json", sprites);
+
+    for (const auto& entry : sprites) {
+    SpriteID id = entry.first;            // Access the key
+    const Sprite& sprite = entry.second; // Access the value
+
+    std::cout << "SpriteID: " << static_cast<int>(id)
+              << ", Atlas Offset: (" << sprite.atlasOffset.x << "," << sprite.atlasOffset.y << ")"
+              << ", Size: (" << sprite.size.x << "," << sprite.size.y << ")"
+              << ", GID: " << sprite.gid << "\n";
+}
     // Main loop
     bool isRunning = true;
 
@@ -140,7 +176,20 @@ int main(int argc, char* argv[]) {
         // Clear the screen
         glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+        
+        //@todo refactor into update and scene manager
+renderLayers(
+            layers,
+            16,
+            9,
+            sprites,
+            textureID2,
+            32,
+            /* atlasWidth  */ (float)GAME_WIDTH,
+            /* atlasHeight */ (float)GAME_HEIGTH,
+            shaderProgram2,
+            VAO2
+        );
         renderManager.update(entityManager, sceneManager);
 
         // Swap buffers to display the current frame

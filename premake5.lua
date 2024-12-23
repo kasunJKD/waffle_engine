@@ -21,6 +21,7 @@ files({
 	"engine/**.h",
 	"vendors/include/glad/src/glad.c", -- Ensure glad.c is included in the project
 })
+
 filter("system:windows")
 links({ "SDL2", "SDL2main", "OpenAL32", "assimp-vc143-mt" })
 libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp", "vendors/lib/openal", "vendors/lib/assimp/assimp-vc143-mt.lib" })

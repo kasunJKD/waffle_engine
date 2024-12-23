@@ -27,7 +27,7 @@ struct TextureManager {
     void flipstbionload();
 private:
     TextureManager() {
-            flipstbionload();// Flip images on load
+            //flipstbionload();// Flip images on load
         }
 
     ~TextureManager() {
