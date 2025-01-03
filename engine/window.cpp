@@ -51,6 +51,9 @@ bool Window::init(const std::string& windowTitle, int windowWidth, int windowHei
 
     // Set OpenGL viewport
     glViewport(0, 0, width, height);
+    // Enable alpha blending
+glEnable(GL_BLEND);
+glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     std::cout << "Window initialized successfully: " << title << " (" << width << "x" << height << ")" << std::endl;
     return true;

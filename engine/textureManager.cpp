@@ -8,7 +8,7 @@
 
 void TextureManager::flipstbionload()
 {
-    stbi_set_flip_vertically_on_load(true); // Flip images on load
+    //stbi_set_flip_vertically_on_load(true); // Flip images on load
 }
 
 GLuint TextureManager::loadTextureFromFile(
@@ -21,6 +21,7 @@ GLuint TextureManager::loadTextureFromFile(
 )
 {
         int width, height, nrChannels;
+        //stbi_set_flip_vertically_on_load(true); // Flip images on load
         unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
 
         if (!data || width == 0 || height == 0)
@@ -41,13 +42,13 @@ GLuint TextureManager::loadTextureFromFile(
         else if (nrChannels == 4)
             format = GL_RGBA;
 
-        glTexImage2D(GL_TEXTURE_2D, level, internal_format, width, height, border, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA, width, height, border, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         stbi_image_free(data);
 

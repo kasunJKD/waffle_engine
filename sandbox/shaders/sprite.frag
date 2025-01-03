@@ -13,5 +13,6 @@ void main() {
         mix(texCoords.y, texCoords.w, TexCoord.y)
     );
     FragColor = texture(texture1, adjustedTexCoord);
+//FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 //FragColor = vec4(TexCoord, 0.0, 1.0);
 }

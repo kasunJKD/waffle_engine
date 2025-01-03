@@ -4,7 +4,7 @@
 
 void ResourceManager::addResource(const std::string& filepath, const std::string& name, ResourceType type) {
     if (type == TEXTURE) {
-        TextureManager::Instance().loadTextureFromFile(filepath.c_str(), name);
+        TextureManager::Instance().loadTextureFromFile(filepath.c_str(), name, GL_RGBA, GL_RGBA, 0, 0);
     } else {
         std::cerr<< "Unknown ResourceType!" << std::endl;
     }

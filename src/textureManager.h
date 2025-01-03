@@ -13,7 +13,6 @@ public:
         if (!m_inst)
         {
             m_inst = new TextureManager();
-            stbi_set_flip_vertically_on_load(true); // Flip images on load
         }
         return m_inst;
     }
@@ -25,6 +24,7 @@ public:
 
     GLuint LoadTexture(const char* filename, GLenum image_format = GL_RGB, GLint internal_format = GL_RGB, GLint level = 0, GLint border = 0)
     {
+    stbi_set_flip_vertically_on_load(true); // Flip images on load
         int width, height, nrChannels;
         unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
 

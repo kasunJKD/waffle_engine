@@ -148,7 +148,7 @@ GLuint textureID2 = resourceManager.getResource<GLuint>("spritesheet", ResourceT
 
     auto sprites = initializeSprites();
 
-     std::vector<Layer> layers = parseTiledJSON("assets/tiled/testmapAlldata.json", sprites);
+    TiledMap mapData = parseTiledJSON("assets/tiled/testmapAlldata.json");
 
     for (const auto& entry : sprites) {
     SpriteID id = entry.first;            // Access the key
@@ -159,6 +159,17 @@ GLuint textureID2 = resourceManager.getResource<GLuint>("spritesheet", ResourceT
               << ", Size: (" << sprite.size.x << "," << sprite.size.y << ")"
               << ", GID: " << sprite.gid << "\n";
 }
+
+for (const auto& group : mapData.objectGroups) {
+        std::cout << "ObjectGroup name: " << group.name << "\n";
+        if (group.name == "playerstart") {
+            // We expect maybe 1 object in playerstart?
+            for (const auto& obj : group.objects) {
+                std::cout << "  Found player start object. "
+                          << "x=" << obj.x << ", y=" << obj.y << "\n";
+            }
+        }
+    }
     // Main loop
     bool isRunning = true;
 
@@ -178,8 +189,7 @@ GLuint textureID2 = resourceManager.getResource<GLuint>("spritesheet", ResourceT
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         //@todo refactor into update and scene manager
-renderLayers(
-            layers,
+renderLayers(mapData.layers,
             16,
             9,
             sprites,
@@ -191,6 +201,9 @@ renderLayers(
             VAO2
         );
         renderManager.update(entityManager, sceneManager);
+
+        Sprite& playerSpriteViaSubscript = sprites[PLAYER];
+        renderTile_P(playerSpriteViaSubscript, textureID2, (float)GAME_WIDTH, (float)GAME_HEIGTH, shaderProgram2, VAO2);
 
         // Swap buffers to display the current frame
         window.swapBuffers();
