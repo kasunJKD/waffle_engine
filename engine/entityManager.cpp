@@ -1,4 +1,5 @@
 #include "entityManager.h"
+#include "entity.h"
 
 entity_id EntityManager::CreateEntity()
 {
@@ -36,6 +37,9 @@ uint32_t EntityManager::queryComponents(entity_id entity) const {
     if (movables.find(entity) != movables.end()) {
         componentMask |= ComponentType::Movables;
     }
+    if(tilemaps.find(entity) != tilemaps.end()){
+        componentMask |= ComponentType::TiledMaps;
+    }
 
     return componentMask;
 }
@@ -70,6 +74,12 @@ void EntityManager::AddAudioEmitterComponent(entity_id entity, const AudioEmitte
 void EntityManager::AddMovableComponent(entity_id entity, const MovableComponent& movable)
 {
     movables[entity] = movable;
+}
+
+
+void EntityManager::AddTiledMapComponent(entity_id entity, const TiledMapComponent& tiledmap)
+{
+    tilemaps[entity] = tiledmap;
 }
 
 

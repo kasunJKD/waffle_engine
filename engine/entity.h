@@ -7,6 +7,7 @@
 #include <iostream> // For std::cerr and std::endl
 #include <AL/al.h>
 #include <AL/alc.h>
+#include "defines.h"
 
 using entity_id = uint32_t;
 
@@ -49,6 +50,10 @@ struct AudioEmitterComponent
 struct MovableComponent {
     float speed;  // Movement speed
     glm::vec3 direction; // Current movement direction
+};
+
+struct TiledMapComponent {
+    TiledMap tilemap;
 };
 
 #endif // ENTITY_H

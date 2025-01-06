@@ -5,9 +5,15 @@
 #include "soundSystem.h"
 #include "input.h"
 #include "sceneManager.h"
-#include "tiles.h"
+
+#include <cstdint>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp> // For glm::translate
+#include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+
+#include "defines.h"
 
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
@@ -78,6 +84,18 @@ entity_id initquad(EntityManager& entityManager)
     return id;
 }
 
+entity_id initTiledMap_game(EntityManager& entityManager, RenderManager& renderManager)
+{
+    entity_id id = entityManager.CreateEntity();
+
+    TiledMap mapData = renderManager.parseTiledJSON("assets/tiled/testmapAlldata.json");
+    TiledMapComponent comp = {
+        mapData
+    };
+    entityManager.AddTiledMapComponent(id, comp);
+    return id;
+}
+
 uint32_t lastTicks = SDL_GetTicks();
 
 float calculateDeltaTime() {
@@ -91,7 +109,6 @@ int main(int argc, char* argv[]) {
     Window window;
 
     ResourceManager resourceManager;
-    // Add a texture resource
     
     EntityManager entityManager;
     
@@ -130,25 +147,27 @@ int main(int argc, char* argv[]) {
 
     resourceManager.addResource("assets/tiled/testSpritesheet.png", "spritesheet", TEXTURE);
      
-
-    GLuint VAO2, shaderProgram2;
-
     // Initialize VAO and Shader Program
-    std::tie(VAO2, shaderProgram2) = renderTileInit();
-glm::mat4 projection = glm::ortho(
+    renderManager.renderTileInit();
+    glm::mat4 projection = glm::ortho(
         0.0f, (float)GAME_WIDTH,    // left, right
         (float)GAME_HEIGTH, 0.0f,   // bottom, top
         -1.0f, 1.0f                  // near, far
     ); 
     // 5) Set that projection once (or each frame)
-    glUseProgram(shaderProgram2);
-    GLint projLoc = glGetUniformLocation(shaderProgram2, "projection");
+    glUseProgram(renderManager.spShader);
+    GLint projLoc = glGetUniformLocation(renderManager.spShader, "projection");
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-GLuint textureID2 = resourceManager.getResource<GLuint>("spritesheet", ResourceType::TEXTURE);
+    
+    GLuint textureID2 = resourceManager.getResource<GLuint>("spritesheet", ResourceType::TEXTURE);
 
-    auto sprites = initializeSprites();
+    auto sprites = renderManager.initializeSprites();
 
-    TiledMap mapData = parseTiledJSON("assets/tiled/testmapAlldata.json");
+    TiledMap mapData = renderManager.parseTiledJSON("assets/tiled/testmapAlldata.json");
+    //@TODO add tiled map to component and load and render by component
+    //@TODO addEntityToScene(entity, sceneName) modify this
+    //entity_id mapID = initTiledMap_game(entityManager, renderManager);
+    //sceneManager.addEntityToScene(mapID);
 
     for (const auto& entry : sprites) {
     SpriteID id = entry.first;            // Access the key
@@ -175,7 +194,6 @@ for (const auto& group : mapData.objectGroups) {
 
     while (isRunning) {
         uint32_t frameStart = SDL_GetTicks();
-
         float dt = calculateDeltaTime();
 
         inputManager.update(isRunning);
@@ -189,21 +207,19 @@ for (const auto& group : mapData.objectGroups) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         //@todo refactor into update and scene manager
-renderLayers(mapData.layers,
+renderManager.renderLayers(mapData.layers,
             16,
             9,
             sprites,
             textureID2,
             32,
             /* atlasWidth  */ (float)GAME_WIDTH,
-            /* atlasHeight */ (float)GAME_HEIGTH,
-            shaderProgram2,
-            VAO2
+            /* atlasHeight */ (float)GAME_HEIGTH
         );
         renderManager.update(entityManager, sceneManager);
 
         Sprite& playerSpriteViaSubscript = sprites[PLAYER];
-        renderTile_P(playerSpriteViaSubscript, textureID2, (float)GAME_WIDTH, (float)GAME_HEIGTH, shaderProgram2, VAO2);
+        renderManager.renderTile_P(playerSpriteViaSubscript, textureID2, (float)GAME_WIDTH, (float)GAME_HEIGTH);
 
         // Swap buffers to display the current frame
         window.swapBuffers();
