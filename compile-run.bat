@@ -36,8 +36,9 @@ cd bin\Debug
 
 if exist Sandbox.exe (
     echo Running Sandbox.exe...
-    "D:\Personal\waffle_engine\build\bin\Debug\Sandbox.exe"
-    pause
+    cd /d %~dp0
+    D:\Personal\waffle_engine\build\bin\Debug\Sandbox.exe
+    
 ) else (
     echo Sandbox.exe not found. Please check your build configuration.
     pause
