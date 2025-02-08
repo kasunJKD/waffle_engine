@@ -1,6 +1,6 @@
 #include "allocator.h"
 #include "debug.h"
-
+namespace MEM {
 MemoryArena* arena_create(size_t size) {
     MemoryArena* arena = (MemoryArena*)malloc(sizeof(MemoryArena));
     if (!arena) {
@@ -56,4 +56,5 @@ void arena_print_stats(MemoryArena* arena) {
     printf("  Total size: %zu bytes\n", arena->size);
     printf("  Used:       %zu bytes\n", arena->offset);
     printf("  Allocations: %zu\n", arena->allocations);
+}
 }

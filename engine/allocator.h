@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-
+namespace MEM {
 struct MemoryArena
 {
 	void* base;
@@ -19,5 +19,6 @@ void arena_destroy(MemoryArena* arena);
 void* arena_alloc(MemoryArena* arena, size_t size);
 void arena_reset(MemoryArena* arena);
 void arena_print_stats(MemoryArena* arena);
+}
 
 #endif

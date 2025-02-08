@@ -4,8 +4,10 @@
 #include <cstdio>
 #include <cstring>
 
-static MemoryArena *g_arena = nullptr;
+static MEM::MemoryArena *g_arena = nullptr;
 
+namespace Entity {
+// This function should be called once by the engine during initialization,
 // Global arrays for built-in component storage allocated from the arena.
 static TransformComponent *g_transformComponents = nullptr;
 static bool *g_transformComponentPresent = nullptr;
@@ -16,10 +18,9 @@ static bool *g_velocityComponentPresent = nullptr;
 // Global entity counter.
 static EntityId g_nextEntityId = 1;
 
-// This function should be called once by the engine during initialization,
 // passing in an arena that was created with arena_create().
 void initialize_component_storage(void *arenaMemory, size_t arenaSize) {
-  g_arena = (MemoryArena *)arenaMemory;
+  g_arena = (MEM::MemoryArena *)arenaMemory;
 
   // Calculate required memory.
   size_t requiredMemory =
@@ -85,4 +86,5 @@ bool has_velocity_component(Entity e) {
   if (e.id >= MAX_ENTITIES)
     return false;
   return g_velocityComponentPresent[e.id];
+}
 }
