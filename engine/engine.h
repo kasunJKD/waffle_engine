@@ -7,5 +7,7 @@
 #include "allocator.h" // IWYU pragma: keep
 #include "entity.h" // IWYU pragma: keep
 #include "component_manager.h" // IWYU pragma: keep
+#include "window.h" // IWYU pragma: keep
+#include "resourceManager.h" // IWYU pragma: keep
 
 #endif // ENGINE_H
