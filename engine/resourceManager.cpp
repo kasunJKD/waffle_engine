@@ -1,4 +1,5 @@
 #include "resourceManager.h"
+#include "textureManager.h"
 #include "debug.h"
 
 static int fileExists(const char* path) {
@@ -44,6 +45,7 @@ void destroyResourceManager(ResourceManager* mgr) {
     // In a bump allocator, we cannot free individual allocations.
     // Destroying the arena frees all allocated memory in one shot.
     MEM::arena_destroy(mgr->arena);
+    TextureManager::Instance().clear();
 }
 
 void unloadResource(ResourceManager* mgr, Resource* resource) {
@@ -83,11 +85,13 @@ Resource* load(ResourceManager* mgr, const char* path, ResourceType type) {
         return NULL;
     }
     res->type = type;
+    res->path = path;
     
     switch (type) {
         case TEXTURE:
         {
-           DEBUG_LOG("texture working"); 
+                GLuint texture_id = TextureManager::Instance().loadTextureFromFile(path, path, GL_RGBA, GL_RGBA, 0, 0);
+                res->data = &texture_id; 
             break;
         }
         case SHADER:
