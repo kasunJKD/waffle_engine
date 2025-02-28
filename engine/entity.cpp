@@ -1,90 +1,53 @@
 #include "entity.h"
 #include "allocator.h"
 #include "debug.h"
-#include <cstdio>
 #include <cstring>
 
-static MEM::MemoryArena *g_arena = nullptr;
-
-namespace Entity {
-// This function should be called once by the engine during initialization,
-// Global arrays for built-in component storage allocated from the arena.
-static TransformComponent *g_transformComponents = nullptr;
-static bool *g_transformComponentPresent = nullptr;
-
-static VelocityComponent *g_velocityComponents = nullptr;
-static bool *g_velocityComponentPresent = nullptr;
+static EntityList* entity_list = nullptr;
 
 // Global entity counter.
-static EntityId g_nextEntityId = 1;
+static entityId g_nextEntityId = 1;
 
-// passing in an arena that was created with arena_create().
-void initialize_component_storage(void *arenaMemory, size_t arenaSize) {
-  g_arena = (MEM::MemoryArena *)arenaMemory;
-
-  // Calculate required memory.
-  size_t requiredMemory =
-      (sizeof(TransformComponent) + sizeof(bool)) * MAX_ENTITIES +
-      (sizeof(VelocityComponent) + sizeof(bool)) * MAX_ENTITIES;
-
-  if (arenaSize < requiredMemory) {
-    DEBUG_ERROR(
-        "Not enough memory in arena: required %zu bytes, provided %zu bytes.",
-        requiredMemory, arenaSize);
-    return;
+void entity_system_init(MEM::MemoryArena *arena)
+{
+  if(entity_list == nullptr)
+  {
+    entity_list = static_cast<EntityList*>(MEM::arena_alloc(arena, sizeof(EntityList)));
+    entity_list->entity_count = 0;
+    std::memset(entity_list, 0, sizeof(EntityList));
   }
-
-  g_transformComponents = (TransformComponent *)arena_alloc(
-      g_arena, sizeof(TransformComponent) * MAX_ENTITIES);
-
-  g_transformComponentPresent =
-      (bool *)arena_alloc(g_arena, sizeof(bool) * MAX_ENTITIES);
-  memset(g_transformComponentPresent, 0, sizeof(bool) * MAX_ENTITIES);
-
-  g_velocityComponents = (VelocityComponent *)arena_alloc(
-      g_arena, sizeof(VelocityComponent) * MAX_ENTITIES);
-
-  g_velocityComponentPresent =
-      (bool *)arena_alloc(g_arena, sizeof(bool) * MAX_ENTITIES);
-  memset(g_velocityComponentPresent, 0, sizeof(bool) * MAX_ENTITIES);
-
-  DEBUG_LOG("Engine component storage initialized", MAX_ENTITIES);
-}
-
-Entity create_entity() {
-  Entity e;
-  e.id = g_nextEntityId++;
-  DEBUG_LOG("Created entity with ID %d", e.id);
-  return e;
-}
-
-void add_transform_component(Entity e, const TransformComponent &transform) {
-  if (e.id >= MAX_ENTITIES) {
-    DEBUG_ERROR("Entity id out of range in add_transform_component");
-    return;
+  else {
+    DEBUG_ERROR("entity system is already initialised");
+    DEBUG_ASSERT(entity_list != nullptr);
   }
-  g_transformComponents[e.id] = transform;
-  g_transformComponentPresent[e.id] = true;
 }
 
-void add_velocity_component(Entity e, const VelocityComponent &velocity) {
-  if (e.id >= MAX_ENTITIES) {
-    DEBUG_ERROR("Entity id out of range in add_velocity_component");
-    return;
-  }
-  g_velocityComponents[e.id] = velocity;
-  g_velocityComponentPresent[e.id] = true;
+Entity* create_entity(MEM::MemoryArena* arena, const char* name) {
+    if (entity_list->entity_count >= MAX_ENTITIES) return nullptr;
+
+    Entity* entity = static_cast<Entity*>(MEM::arena_alloc(arena, sizeof(Entity)));
+    if (!entity) return nullptr;
+
+    entity->id = g_nextEntityId++;
+    entity->name = name;
+    entity->component_count = 0;
+
+    entity_list->entities[entity_list->entity_count++] = entity;
+    DEBUG_LOG("Created entity with ID %d", entity->id);
+    return entity;
 }
 
-bool has_transform_component(Entity e) {
-  if (e.id >= MAX_ENTITIES)
-    return false;
-  return g_transformComponentPresent[e.id];
+VelocityComponent* add_VelocityComponent(MEM::MemoryArena* arena, Entity* entity)
+{
+
+    DEBUG_ASSERT(entity->component_count <= COMPONENT_LIMIT);
+
+    VelocityComponent* component = static_cast<VelocityComponent*>(MEM::arena_alloc(arena, sizeof(VelocityComponent)));
+    if (!component) return nullptr;
+
+    entity->components[entity->component_count++] = component;
+    return component;
 }
 
-bool has_velocity_component(Entity e) {
-  if (e.id >= MAX_ENTITIES)
-    return false;
-  return g_velocityComponentPresent[e.id];
-}
-}
+//@TODO have to implement remove chunk of entities 
+//@TODO bundle components to gether keep array of components of each type

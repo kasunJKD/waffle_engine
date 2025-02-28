@@ -2,47 +2,47 @@
 #define ENTITY_H
 
 #include <cstdint>
+#include "allocator.h"
 #include <glm/glm.hpp>
 
 #define MAX_ENTITIES 1024
-namespace Entity {
-	using EntityId = uint32_t;
+#define COMPONENT_LIMIT 10
 
-	struct Entity 
-	{
-		EntityId id;
-	};
+using entityId = uint32_t;
 
-	struct TransformComponent
-	{
-		glm::vec3 position;
-	    float rotation;   // In degrees
-	    glm::vec2 scale;
+struct Entity 
+{
+	entityId id;
+	const char* name;
+	void* components[COMPONENT_LIMIT];
+	size_t component_count;
+};
 
-	    //used in audio
-	    glm::vec3 forward;
-	    glm::vec3 up;
-	};
+struct EntityList {
+	Entity* entities[MAX_ENTITIES];
+	size_t entity_count;
+};
 
-	struct VelocityComponent {
-	    glm::vec3 velocity;
-	};
+struct TransformComponent
+{
+	glm::vec3 position;
+    float rotation;   // In degrees
+    glm::vec2 scale;
+
+    //used in audio
+    glm::vec3 forward;
+    glm::vec3 up;
+};
+
+struct VelocityComponent {
+    glm::vec3 velocity;
+};
 
 
-	// Function to create a new entity.
-	Entity create_entity();
+void entity_system_init(MEM::MemoryArena *arena);
 
-	// Functions to assign components to an entity.
+Entity* create_entity(MEM::MemoryArena* arena, const char* name);
 
-	void initialize_component_storage(void* arenaMemory, size_t arenaSize);
-	void add_transform_component(Entity e, const TransformComponent& transform);
+VelocityComponent* add_VelocityComponent(MEM::MemoryArena* arena, Entity* entity);
 
-	void add_velocity_component(Entity e, const VelocityComponent& velocity);
-	// Utility functions to check for and retrieve components.
-
-	bool has_transform_component(Entity e);
-
-	bool has_velocity_component(Entity e);
-
-}
 #endif //ENTITY_H

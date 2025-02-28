@@ -6,7 +6,6 @@
 // for convenience so that clients only need to include engine.h.
 #include "allocator.h" // IWYU pragma: keep
 #include "entity.h" // IWYU pragma: keep
-#include "component_manager.h" // IWYU pragma: keep
 #include "window.h" // IWYU pragma: keep
 #include "resourceManager.h" // IWYU pragma: keep
 #include "inputManager.h" // IWYU pragma: keep

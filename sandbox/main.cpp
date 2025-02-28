@@ -1,4 +1,5 @@
 #include "engine.h" // IWYU pragma: keep
+#include "entity.h"
 #include "resourceManager.h"
 
 #ifdef DEBUG_ENABLED
@@ -56,20 +57,17 @@ int main() {
         DEBUG_ERROR("spritesheet error");
         return -1;
     }
-    
-    // Initialize engine and game component storage from the arena.
-    Entity::initialize_component_storage(arena, arenaSize);
-    
-    Entity::Entity e = Entity::create_entity();
-    
-    Entity::TransformComponent t;
-    t.position = glm::vec3(0.0f, 0.0f, 0.0f);
-    t.rotation = 0.0f;
-    t.scale = glm::vec2(1.0f, 1.0f);
-    t.forward = glm::vec3(0.0f, 0.0f, 1.0f);
-    t.up = glm::vec3(0.0f, 1.0f, 0.0f);
-    Entity::add_transform_component(e, t);
 
+    //#################
+    //ECS
+    //###############
+    entity_system_init(arena);
+    
+    Entity* player = create_entity(arena, "player");
+    VelocityComponent* velocity_c = add_VelocityComponent(arena, player);
+    velocity_c->velocity = {0.0f, 0.0f, 0.0f};
+
+    
 inputManager.init();
 
     bool isRunning = true;
