@@ -1,4 +1,5 @@
 #include "resourceManager.h"
+#include "shader.h"
 #include "textureManager.h"
 #include "debug.h"
 
@@ -64,7 +65,7 @@ void unloadResource(ResourceManager* mgr, Resource* resource) {
     // The memory will be reclaimed only when the entire arena is reset or destroyed.
 }
 
-Resource* load(ResourceManager* mgr, const char* path, ResourceType type) {
+Resource* load(ResourceManager* mgr, const char* path,const char* path2, ResourceType type) {
     if (!mgr || !path)
         return NULL;
     
@@ -95,6 +96,11 @@ Resource* load(ResourceManager* mgr, const char* path, ResourceType type) {
             break;
         }
         case SHADER:
+            {
+                shader sh = shader(path, path2);
+                res->data = &sh.shaderProgramId;
+                break;
+            }
         case SOUND_WAV:
         case SOUND_STREAM:
         default:

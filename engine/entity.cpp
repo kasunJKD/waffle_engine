@@ -1,53 +1,46 @@
 #include "entity.h"
 #include "allocator.h"
 #include "debug.h"
-#include <cstring>
-
-static EntityList* entity_list = nullptr;
-
-// Global entity counter.
+#include <cassert>
+static EntitySystem* entity_system = nullptr;
 static entityId g_nextEntityId = 1;
 
-void entity_system_init(MEM::MemoryArena *arena)
-{
-  if(entity_list == nullptr)
-  {
-    entity_list = static_cast<EntityList*>(MEM::arena_alloc(arena, sizeof(EntityList)));
-    entity_list->entity_count = 0;
-    std::memset(entity_list, 0, sizeof(EntityList));
-  }
-  else {
-    DEBUG_ERROR("entity system is already initialised");
-    DEBUG_ASSERT(entity_list != nullptr);
-  }
+void entity_system_init(MEM::MemoryArena* arena) {
+    if (!entity_system) {
+        void* memory = MEM::arena_alloc(arena, sizeof(EntitySystem));
+        if (!memory) {
+            DEBUG_ERROR("Failed to allocate memory for EntitySystem!");
+            return;
+        }
+
+        // Placement new to construct EntitySystem properly
+        entity_system = new (memory) EntitySystem();
+
+        DEBUG_LOG("Entity system initialized successfully");
+    } else {
+        DEBUG_ERROR("Entity system is already initialized");
+    }
 }
 
-Entity* create_entity(MEM::MemoryArena* arena, const char* name) {
-    if (entity_list->entity_count >= MAX_ENTITIES) return nullptr;
+Entity* create_entity(const char* name) {
+    if (!entity_system || entity_system->entity_count >= MAX_ENTITIES) return nullptr;
 
-    Entity* entity = static_cast<Entity*>(MEM::arena_alloc(arena, sizeof(Entity)));
-    if (!entity) return nullptr;
-
+    Entity* entity = &entity_system->entities[entity_system->entity_count++];
     entity->id = g_nextEntityId++;
     entity->name = name;
-    entity->component_count = 0;
 
-    entity_list->entities[entity_list->entity_count++] = entity;
     DEBUG_LOG("Created entity with ID %d", entity->id);
     return entity;
 }
 
-VelocityComponent* add_VelocityComponent(MEM::MemoryArena* arena, Entity* entity)
-{
+void remove_entity(entityId id) {
+    if (!entity_system) return;
 
-    DEBUG_ASSERT(entity->component_count <= COMPONENT_LIMIT);
-
-    VelocityComponent* component = static_cast<VelocityComponent*>(MEM::arena_alloc(arena, sizeof(VelocityComponent)));
-    if (!component) return nullptr;
-
-    entity->components[entity->component_count++] = component;
-    return component;
+    for (size_t i = 0; i < entity_system->entity_count; ++i) {
+        if (entity_system->entities[i].id == id) {
+            entity_system->entities[i] = entity_system->entities[--entity_system->entity_count];
+            DEBUG_LOG("Removed entity with ID %d", id);
+            return;
+        }
+    }
 }
-
-//@TODO have to implement remove chunk of entities 
-//@TODO bundle components to gether keep array of components of each type

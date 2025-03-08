@@ -1,5 +1,4 @@
 #include "engine.h" // IWYU pragma: keep
-#include "entity.h"
 #include "resourceManager.h"
 
 #ifdef DEBUG_ENABLED
@@ -9,19 +8,13 @@
 #include <cstdio>
 #include <cstdlib>
 
-//TODO add systems Engine side audio, input etc 
-//game side systems too
-//shaders
-//game logic code seperation
-//game side components
-
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
 #define GAME_WIDTH 512
 #define GAME_HEIGTH 288
 
 const uint32_t TARGET_FPS = 60;
-const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; // Time per frame in milliseconds
+const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; 
 
 uint32_t lastTicks = SDL_GetTicks();
 
@@ -43,7 +36,7 @@ int main() {
         return -1;
     }
     
-    size_t arenaSize = 1024 * 1024; // For example, 1 MB.
+    size_t arenaSize = 10 * (1024 * 1024); // For example, 1 MB.
     MEM::MemoryArena* arena = MEM::arena_create(arenaSize);
     if (!arena) {
         DEBUG_ERROR("Failed to create MemoryArena.");
@@ -51,7 +44,7 @@ int main() {
     }
 
     ResourceManager* r_manager = createResourceManager(arenaSize);
-    Resource* spritesheet = load(r_manager, "assets/tiled/testSpritesheet.png", TEXTURE);
+    Resource* spritesheet = load(r_manager, "assets/tiled/testSpritesheet.png", nullptr, TEXTURE);
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
@@ -63,19 +56,17 @@ int main() {
     //###############
     entity_system_init(arena);
     
-    Entity* player = create_entity(arena, "player");
-    VelocityComponent* velocity_c = add_VelocityComponent(arena, player);
-    velocity_c->velocity = {0.0f, 0.0f, 0.0f};
+    Entity* player = create_entity("player");
+    player->type = PLAYER;
 
     
-inputManager.init();
+    inputManager.init();
 
     bool isRunning = true;
     while (isRunning) {
          uint32_t frameStart = SDL_GetTicks();
         //float dt = calculateDeltaTime();
-        
-inputManager.update(isRunning);
+         inputManager.update(isRunning);
         
          // Clear the screen
         glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
