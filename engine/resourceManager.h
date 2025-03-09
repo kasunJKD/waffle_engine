@@ -2,6 +2,7 @@
 #define RESOURCEMANAGER_H
 
 #include "allocator.h"
+#include "glad/glad.h"
 #include <cstddef>
 #include <stdio.h>
 enum ResourceType {
@@ -11,10 +12,15 @@ enum ResourceType {
     SOUND_STREAM
 };
 
+union dataTypeResource {
+    GLuint i;
+    void *v;
+};
+
 struct Resource {
     ResourceType type;
     const char* path;
-    void* data;
+    dataTypeResource data;
     size_t size;
 };
 

@@ -65,20 +65,20 @@ void unloadResource(ResourceManager* mgr, Resource* resource) {
     // The memory will be reclaimed only when the entire arena is reset or destroyed.
 }
 
-Resource* load(ResourceManager* mgr, const char* path,const char* path2, ResourceType type) {
+Resource* load(ResourceManager* mgr, const char* path, const char* path2, ResourceType type) {
     if (!mgr || !path)
         return NULL;
-    
+
     if (!verifyResourcePath(path)) {
         DEBUG_ERROR("Resource path does not exist: %s\n", path);
         return NULL;
     }
-    
+
     if (mgr->count >= MAX_RESOURCES) {
         DEBUG_ERROR("Maximum resource count reached.\n");
         return NULL;
     }
-    
+
     // Allocate the Resource structure from the fixed arena.
     Resource* res = (Resource*)MEM::arena_alloc(mgr->arena, sizeof(Resource));
     if (!res) {
@@ -86,33 +86,42 @@ Resource* load(ResourceManager* mgr, const char* path,const char* path2, Resourc
         return NULL;
     }
     res->type = type;
-    res->path = path;
-    
+    res->path = path; // Store the path, assuming path management is handled properly outside this function.
+
     switch (type) {
         case TEXTURE:
         {
-                GLuint texture_id = TextureManager::Instance().loadTextureFromFile(path, path, GL_RGBA, GL_RGBA, 0, 0);
-                res->data = &texture_id; 
+            GLuint texture_id = TextureManager::Instance().loadTextureFromFile(path, path, GL_RGBA, GL_RGBA, 0, 0);
+
+            // Allocate memory for texture ID from the arena and store the pointer.
+            GLuint *textureIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
+            *textureIDPtr = texture_id;  // Store the texture ID
+
+            res->data.i = *textureIDPtr; // Store the pointer to the texture ID
             break;
         }
         case SHADER:
-            {
-                shader sh = shader(path, path2);
-                res->data = &sh.shaderProgramId;
-                break;
-            }
+        {
+            shader sh = shader(path, path2);
+
+            // Allocate memory for shader ID from the arena and store the pointer.
+            GLuint* shaderIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
+            *shaderIDPtr = sh.shaderProgramId; // Store the shader program ID
+
+            res->data.i = *shaderIDPtr; // Store the pointer to the shader ID
+            break;
+        }
         case SOUND_WAV:
         case SOUND_STREAM:
         default:
             DEBUG_ERROR("Unknown resource type for: %s\n", path);
             return NULL;
     }
-    
+
     // Add the resource pointer to the fixed-size array.
     mgr->resources[mgr->count++] = res;
     return res;
 }
-
 
 
 

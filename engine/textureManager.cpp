@@ -1,4 +1,6 @@
 #include "textureManager.h"
+#include "debug.h"
+#include <cstdio>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "glad/glad.h"
@@ -35,6 +37,7 @@ GLuint TextureManager::loadTextureFromFile(
         glBindTexture(GL_TEXTURE_2D, gl_texID);
 
         GLenum format = image_format;
+        printf("%d", format);
         if (nrChannels == 1)
             format = GL_RED;
         else if (nrChannels == 3)
@@ -42,7 +45,7 @@ GLuint TextureManager::loadTextureFromFile(
         else if (nrChannels == 4)
             format = GL_RGBA;
 
-        glTexImage2D(GL_TEXTURE_2D, level, internal_format, width, height, border, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, level, internal_format, width, height, border, internal_format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
