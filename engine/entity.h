@@ -23,6 +23,15 @@ struct World {
     int8_t worldnumber;
 };
 
+struct Camera {
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::vec2 position; // Camera position in the world
+    float zoom;         // Camera zoom level
+    float width;        // camera width = 512
+    float height;       // camera height = 288
+};
+
 struct Entity {
     entityId id;
     EntityType type;
@@ -36,6 +45,9 @@ struct Entity {
 
     int8_t world_belong_to;
     int8_t current_world;
+
+    //player related camera
+    Camera *camera;
 };
 
 struct EntitySystem {

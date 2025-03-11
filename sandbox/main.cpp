@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // For glm::translate
 #include <glm/gtc/type_ptr.hpp>
+#include "glrenderSystem.h"
 #include "resourceManager.h"
 #include <iostream>
 
@@ -30,21 +31,6 @@ float calculateDeltaTime() {
     lastTicks = currentTicks;
     return deltaTime;
 }
-void CheckGLError(const std::string& message) {
-    GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR) {
-        std::cerr << "OpenGL Error (" << message << "): " << err << std::endl;
-    }
-}
-
-struct Camera {
-    glm::mat4 projection;
-    glm::mat4 view;
-    glm::vec2 position; // Camera position in the world
-    float zoom;         // Camera zoom level
-    float width;        // camera width = 512
-    float height;       // camera height = 288
-};
 
 GLuint quadShaderProgram;
 
@@ -72,24 +58,24 @@ void UpdateCamera(Camera &camera)
 
 void CreateFramebuffer(GLuint &fbo, GLuint &texture) {
     glGenFramebuffers(1, &fbo);
-CheckGLError("glgenframebuffers");
+    CheckGLError("glgenframebuffers");
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-CheckGLError("glbindframebuffers");
+    CheckGLError("glbindframebuffers");
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-CheckGLError("glframebuffers");
-unsigned int rbo;
+    CheckGLError("glframebuffers");
+    unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH); // use a single renderbuffer object for both a depth AND stencil buffer.
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
-   // Check framebuffer status
+    // Check framebuffer status
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         std::cerr << "Framebuffer not complete! Status: " << status << std::endl;
@@ -105,11 +91,11 @@ void InitFrameBuffer(World &world1, World &world2) {
 
 void RenderWorldToFBO(World &world) {
     glBindFramebuffer(GL_FRAMEBUFFER, world.fbo);
-CheckGLError("glbindframebuffers");
+    CheckGLError("glbindframebuffers");
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // Render the background image into this FBO. 
+    // Render the background image into this FBO. 
     glUseProgram(quadShaderProgram);
 
     // For a full-screen pass from -1..1, you can use identity or your existing
@@ -131,48 +117,14 @@ CheckGLError("glbindframebuffers");
 
     // done drawing into the FBO
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    
+
     // Render your world-specific objects here
     // Example: RenderWorldObjects(world.worldnumber);
 
     //glBindFramebuffer(GL_FRAMEBUFFER, 0); // Switch back to default framebuffer
 }
 
-void InitQuad() {
- float quadVertices[] = {
-        // position     // texCoord
-         0.0f,    0.0f,    0.0f, 0.0f,
-         3072.0f, 0.0f,    1.0f, 0.0f,
-         3072.0f, 1728.0f, 1.0f, 1.0f,
 
-         0.0f,    0.0f,    0.0f, 0.0f,
-         3072.0f, 1728.0f, 1.0f, 1.0f,
-         0.0f,    1728.0f, 0.0f, 1.0f
-    };
-
-    glGenVertexArrays(1, &quadVAO);
-CheckGLError("glGenVertexArrays");
-    glGenBuffers(1, &quadVBO);
-CheckGLError("glGenBuffers");
-
-    glBindVertexArray(quadVAO);
-CheckGLError("glbindvertexarray");
-
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-CheckGLError("glbindbuffer");
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-
-    // Position attribute (2D quad)
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // Texture coordinate attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
 void RenderWorld(GLuint bigWorldTexture, const Camera &camera, GLuint shaderProgram)
 {
     glUseProgram(shaderProgram);
@@ -198,44 +150,25 @@ void RenderWorld(GLuint bigWorldTexture, const Camera &camera, GLuint shaderProg
 }
 
 
-void RenderTexture(GLuint texture,  const Camera &camera) {
-    glUseProgram(quadShaderProgram);
-CheckGLError("gluseprogram");
-
-    glUniformMatrix4fv(glGetUniformLocation(quadShaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(camera.projection));
-    glUniformMatrix4fv(glGetUniformLocation(quadShaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(camera.view));
-
-    glBindVertexArray(quadVAO);
-    glActiveTexture(GL_TEXTURE0);
-CheckGLError("glactivetexture");
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-CheckGLError("glBindTexture");
-    glUniform1i(glGetUniformLocation(quadShaderProgram, "screenTexture"), 0);
-
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
-     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
 
 
 int main() {
     Window window;
     InputManager inputManager;
 
-// Initialize the camera
+    // Initialize the camera
     Camera camera;
     camera.position = glm::vec2(0.0f, 0.0f);
     camera.width = 512.0f;
     camera.height = 288.0f;
     UpdateCamera(camera);
-    
+
     // Initialize the window
     if (!window.init("Sandbox", SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH)) {
         DEBUG_ERROR("Failed to initialize window.");
         return -1;
     }
-    
+
     size_t arenaSize = 10 * (1024 * 1024); // For example, 1 MB.
     MEM::MemoryArena* arena = MEM::arena_create(arenaSize);
     if (!arena) {
@@ -257,47 +190,68 @@ int main() {
 
     //######test world rendering##########
     //#############################
-    InitQuad();
+    RenderSystem rendersys;
+    initRenderSystem(&rendersys, r_manager);
 
-    int8_t active_world = 1;
+    entity_system_init(arena);
+    Entity* we1 = create_entity("world1");
+    we1->camera = &camera;
+    Entity* we2 = create_entity("world2");
+    we2->camera = &camera;
+
+    RenderComponent* w1 = createRenderComponent(&rendersys, we1, "quad", "world1", quadVAO, 1, false);
+    RenderComponent* w2 = createRenderComponent(&rendersys, we2, "quad", "world2", quadVAO, 2, false);
+    w1->VAO = quadVAO;
+    w2->VAO = quadVAO;
+
+    InitWorldQuad(w1);
+    InitWorldQuad(w2);
+
     World world1, world2;
     world1.texture = world1_background->data.i;
     world1.worldnumber = 1;
     world2.texture = world2_background->data.i;
     world2.worldnumber = 2;
-    InitFrameBuffer(world1, world2);
 
     inputManager.init();
 
     bool isRunning = true;
+
+    bool switch_world = false;
     while (isRunning) {
-         uint32_t frameStart = SDL_GetTicks();
+        uint32_t frameStart = SDL_GetTicks();
         //float dt = calculateDeltaTime();
-         inputManager.update(isRunning);
-        
+        inputManager.update(isRunning);
+
         //###test rendering###########
- // 1) Render each world’s background into its FBO:
-    RenderWorldToFBO(world1);
-    RenderWorldToFBO(world2);
 
-    // 2) Now draw whichever world is active onto the default framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    World &activeWorld = (active_world == 1) ? world2 : world1;
+        World &activeWorld = (switch_world) ? world1 : world2;
+        Entity *e = (switch_world) ? we1: we2;
+        RenderComponent* r = (switch_world) ? w1 : w2;
 
-    RenderWorld(activeWorld.texture, camera, quadShaderProgram);
+        RenderWorldTexture(activeWorld.texture, e, r, quad_shader_resource->data.i);
+
+        if (inputManager.isKeyPressed(SDLK_p)) {
+            // Toggle the bool:
+            switch_world = !switch_world;
+
+            // Optional: print or debug
+            std::cout << "P pressed! pauseActive is now " 
+                << (switch_world ? "true" : "false") << std::endl;
+        }
 
         window.swapBuffers();
 
-// Frame limiting
+        // Frame limiting
         uint32_t frameTime = SDL_GetTicks() - frameStart;
         if (frameTime < FRAME_DELAY) {
             SDL_Delay(FRAME_DELAY - frameTime);
         }
     }
-    
+
     MEM::arena_print_stats(arena);
 
     // In a real application, you might reset the arena instead of destroying it.
