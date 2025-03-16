@@ -1,5 +1,5 @@
-#ifndef DEFINES_H
-#define DEFINES_H
+#ifndef ALLOCATOR_H
+#define ALLOCATOR_H
 
 #include <cstddef>
 #include <stdlib.h>
@@ -18,7 +18,7 @@ MemoryArena* arena_create(size_t size);
 void arena_destroy(MemoryArena* arena);
 void* arena_alloc(MemoryArena* arena, size_t size);
 void arena_reset(MemoryArena* arena);
-void arena_print_stats(MemoryArena* arena);
+void arena_print_stats(const MemoryArena* arena);
 }
 
 #endif

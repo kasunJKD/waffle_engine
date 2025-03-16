@@ -2,6 +2,8 @@
 #include "shader.h"
 #include "textureManager.h"
 #include "debug.h"
+#include "utils/hashTable.h"
+#include <string>
 
 static int fileExists(const char* path) {
     FILE* file;
@@ -13,27 +15,29 @@ static int fileExists(const char* path) {
     return 0;
 }
 
-ResourceManager* createResourceManager(size_t arenaSize)
-{
+ResourceManager* createResourceManager(size_t arenaSize) {
     MEM::MemoryArena* r_arena = MEM::arena_create(arenaSize);
     if (!r_arena) {
         DEBUG_ERROR("Failed to create memory arena for ResourceManager.\n");
         return NULL;
     }
 
-    //allocate
+    // Allocate ResourceManager from the arena
     ResourceManager* mgr = (ResourceManager*)MEM::arena_alloc(r_arena, sizeof(ResourceManager));
     if (!mgr) {
         DEBUG_ERROR("Failed to allocate ResourceManager from arena.\n");
         MEM::arena_destroy(r_arena);
         return NULL;
-    }   
-    
+    }
+
+    // Initialize ResourceManager
     mgr->arena = r_arena;
     mgr->count = 0;
-    for (size_t i = 0; i < MAX_RESOURCES; i++) {
-        mgr->resources[i] = NULL;
-    }
+
+    // Properly allocate the hash table
+    mgr->resources.arena = r_arena;  // Assign arena to hash table
+    mgr->resources = *mgr->resources.createTable();
+
     return mgr;
 }
 
@@ -49,23 +53,19 @@ void destroyResourceManager(ResourceManager* mgr) {
     TextureManager::Instance().clear();
 }
 
-void unloadResource(ResourceManager* mgr, Resource* resource) {
-    if (!mgr || !resource) return;
-    
-    // Remove the resource from the manager's array by replacing it with the last element.
-    for (size_t i = 0; i < mgr->count; i++) {
-        if (mgr->resources[i] == resource) {
-            mgr->resources[i] = mgr->resources[mgr->count - 1];
-            mgr->resources[mgr->count - 1] = NULL;
-            mgr->count--;
-            break;
-        }
-    }
-    // Note: Individual memory is not freed in a bump allocator.
-    // The memory will be reclaimed only when the entire arena is reset or destroyed.
-}
+// void unloadResource(ResourceManager* mgr, Resource* resource) {
+//     if (!mgr || !resource) return;
+//     
+//     // Remove the resource from the manager's array by replacing it with the last element.
+//     auto erasedCount = mgr->resources.free_item(resource->name);
+//     if (erasedCount > 0) {
+//         mgr->count = mgr->resources.size;
+//     }
+//     // Note: Individual memory is not freed in a bump allocator.
+//     // The memory will be reclaimed only when the entire arena is reset or destroyed.
+// }
 
-Resource* load(ResourceManager* mgr, const char* path, const char* path2, ResourceType type) {
+Resource* load(ResourceManager* mgr, const char* path, const char* path2, ResourceType type, const char* v) {
     if (!mgr || !path)
         return NULL;
 
@@ -85,30 +85,31 @@ Resource* load(ResourceManager* mgr, const char* path, const char* path2, Resour
         DEBUG_ERROR("Failed to allocate Resource structure for: %s\n", path);
         return NULL;
     }
+
     res->type = type;
-    res->path = path; // Store the path, assuming path management is handled properly outside this function.
+    res->path = path;
+    res->name = v;
 
     switch (type) {
-        case TEXTURE:
-        {
+        case TEXTURE: {
             GLuint texture_id = TextureManager::Instance().loadTextureFromFile(path, path, GL_RGBA, GL_RGBA, 0, 0);
 
             // Allocate memory for texture ID from the arena and store the pointer.
-            GLuint *textureIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
-            *textureIDPtr = texture_id;  // Store the texture ID
+            GLuint* textureIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
+            *textureIDPtr = texture_id;
 
-            res->data.i = *textureIDPtr; // Store the pointer to the texture ID
+            res->data.i = *textureIDPtr;
+            
             break;
         }
-        case SHADER:
-        {
+        case SHADER: {
             shader sh = shader(path, path2);
 
             // Allocate memory for shader ID from the arena and store the pointer.
             GLuint* shaderIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
-            *shaderIDPtr = sh.shaderProgramId; // Store the shader program ID
+            *shaderIDPtr = sh.shaderProgramId;
 
-            res->data.i = *shaderIDPtr; // Store the pointer to the shader ID
+            res->data.i = *shaderIDPtr;
             break;
         }
         case SOUND_WAV:
@@ -118,10 +119,27 @@ Resource* load(ResourceManager* mgr, const char* path, const char* path2, Resour
             return NULL;
     }
 
-    // Add the resource pointer to the fixed-size array.
-    mgr->resources[mgr->count++] = res;
-    return res;
+    // Insert the resource into the hash table
+    mgr->resources.ht_insert(v, res);
+
+    // Retrieve the stored resource from the map
+    Resource* storedResource = mgr->resources.ht_search(v);
+    if (!storedResource) {
+        DEBUG_ERROR("Failed to retrieve inserted resource: %s\n", v);
+        return NULL;
+    }
+
+    // Update count to reflect the new number of resources in the map
+    mgr->count = mgr->resources.count;
+
+    return storedResource;
 }
 
+//@TODO for resource manager remove manuall memory management 
+//use new and use std::unordered_map<class Kty, class Ty> and use names
+Resource* ResourceManager::getResourceByName(const char* name) {
+    DEBUG_LOG("Currently getting resource name %s\n", name);
+    return resources.ht_search(name);
+}
 
 

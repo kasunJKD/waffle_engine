@@ -1,6 +1,7 @@
 #include "entity.h"
 #include "allocator.h"
 #include "debug.h"
+#include "glrenderSystem.h"
 #include <cassert>
 static EntitySystem* entity_system = nullptr;
 static entityId g_nextEntityId = 1;
@@ -31,6 +32,27 @@ Entity* create_entity(const char* name) {
 
     DEBUG_LOG("Created entity with ID %d", entity->id);
     return entity;
+}
+Entity* create_entity(const char* name, EntityType eType, RenderSystem* r)
+{
+    if (!entity_system || entity_system->entity_count >= MAX_ENTITIES) return nullptr;
+
+    Entity* entity = &entity_system->entities[entity_system->entity_count++];
+    entity->id = g_nextEntityId++;
+    entity->name = name;
+
+    switch (eType) {
+        case WORLD: {
+            createRenderComponent(r, entity);
+            break;
+        };
+        default:
+            break;
+    }
+
+    DEBUG_LOG("Created entity with ID %d", entity->id);
+    return entity;
+    
 }
 
 void remove_entity(entityId id) {

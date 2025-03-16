@@ -1,7 +1,5 @@
-#include "entity.h"
 #include "glad/glad.h"
 #include "glm/gtc/type_ptr.hpp"
-#include "resourceManager.h"
 #include "glrenderSystem.h"
 #include <iostream>
 #include <string>
@@ -17,38 +15,20 @@ void CheckGLError(const std::string& message) {
 void initRenderSystem(RenderSystem* rs, ResourceManager* rm) {
     rs->count = 0;
     rs->resManager = rm;
-
     
 }
 
-RenderComponent* createRenderComponent(RenderSystem* rs, 
-                     Entity* e,
-                     std::string shaderName, 
-                     std::string textureName,
-                     GLuint VAO,
-                     int indexCount,
-                     bool useIndices)
+void createRenderComponent(RenderSystem* rs, 
+                     Entity* e)
 {
     if (rs->count >= MAX_RENDER_COMPONENTS) {
         fprintf(stderr, "RenderSystem: too many components!\n");
-        return nullptr;
     }
 
-    RenderComponent* rc = &rs->components[rs->count++];
-    rc->entity_id   = e->id;
-
-    // Use the arena to store the strings
-    rc->shaderName  = shaderName;
-    rc->textureName = textureName;
-
-    rc->VAO         = VAO;
-    rc->indexCount  = indexCount;
-    rc->useIndices  = useIndices;
-
-    return rc;
+    rs->components[rs->count++] = e;
 }
 
-void InitWorldQuad(RenderComponent* rc) {
+void InitWorldQuad(Entity* rc) {
     GLuint quadVBO;
     float quadVertices[] = {
         // position     // texCoord
@@ -85,14 +65,14 @@ void InitWorldQuad(RenderComponent* rc) {
     glBindVertexArray(0);
 }
 
-void RenderWorldTexture(GLuint texture,  Entity *e,RenderComponent *r, GLuint shader) {
+void RenderWorldTexture(GLuint texture,  Entity *e,Camera *r, GLuint shader) {
     glUseProgram(shader);
     CheckGLError("gluseprogram");
 
-    glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(e->camera->projection));
-    glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(e->camera->view));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(r->projection));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(r->view));
 
-    glBindVertexArray(r->VAO);
+    glBindVertexArray(e->VAO);
     glActiveTexture(GL_TEXTURE0);
     CheckGLError("glactivetexture");
 

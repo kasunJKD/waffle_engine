@@ -23,3 +23,71 @@
 
   |ENTITY|          COMPONENTS          |
   |      |      |     |     |       |   |
+
+struct RenderComponent {
+    entityId entity_id;
+    GLuint VAO;             // The VAO handle (already set up with VBO/IBO)
+    int    indexCount;      // How many indices to draw (if using glDrawElements)
+    bool   useIndices;      // Whether we call glDrawElements or glDrawArrays
+};
+
+struct RenderSystem {
+    RenderComponent components[MAX_RENDER_COMPONENTS];
+    int count;
+
+    ResourceManager* resManager;
+};
+
+
+struct World {
+    GLuint texture;
+    int8_t worldnumber;
+};
+
+struct Camera: Entity {
+    glm::mat4 projection;
+    glm::mat4 view;
+    float zoom;         // Camera zoom level
+    float width;        // camera width = 512
+    float height;       // camera height = 288
+};
+
+struct Entity {
+    entityId id;
+    EntityType type;
+    WorldType wtype;
+
+    const char* name;
+
+    int8_t current_world;
+
+    entity_id parent
+    entity_id[] children
+
+    shaderName
+    TextureName
+    VAO
+};
+
+state {
+  world_entity -> 
+  player
+}
+
+world p1
+  e1
+  e1
+  e1
+  e1
+  e1
+  e1
+
+world p2
+  e2
+  e2
+  e2
+  e2
+  e2
+  e2
+
+

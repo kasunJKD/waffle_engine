@@ -9,5 +9,6 @@
 #include "window.h" // IWYU pragma: keep
 #include "resourceManager.h" // IWYU pragma: keep
 #include "inputManager.h" // IWYU pragma: keep
+#include "glrenderSystem.h" // IWYU pragma: keep
 
 #endif // ENGINE_H
