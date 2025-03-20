@@ -6,7 +6,8 @@ enum ResourceType {
     TEXTURE,
     SHADER ,
     SOUND_WAV,
-    SOUND_STREAM
+    SOUND_STREAM,
+    FONT,
 };
 
 union dataTypeResource {

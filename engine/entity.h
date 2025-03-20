@@ -19,6 +19,7 @@ enum EntityType {
     WORLD,
     CAMERA,
     MONSTER,
+    TEXT
 };
 
 enum WorldType {
@@ -34,7 +35,10 @@ struct Entity {
     const char* name;
 
     glm::vec3 position;
+    float scale;
+    glm::vec3 color;
 
+    //fontmanger manages font renders no need these
     const char* texture_name;
     const char* shader_name;
     GLuint VAO;
@@ -43,6 +47,8 @@ struct Entity {
     std::vector<Entity*> children;
 
     bool active;
+
+
 };
 
 struct Camera: Entity {

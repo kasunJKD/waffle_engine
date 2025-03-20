@@ -1,4 +1,5 @@
 #include "resourceManager.h"
+#include "font.h"
 #include "shader.h"
 #include "textureManager.h"
 #include "debug.h"
@@ -65,7 +66,7 @@ void destroyResourceManager(ResourceManager* mgr) {
 //     // The memory will be reclaimed only when the entire arena is reset or destroyed.
 // }
 
-Resource* load(ResourceManager* mgr, const char* path, const char* path2, ResourceType type, const char* v) {
+Resource* load(ResourceManager* mgr, const char* path, const char* path2, ResourceType type, const char* v, int fsize) {
     if (!mgr || !path)
         return NULL;
 
@@ -114,6 +115,12 @@ Resource* load(ResourceManager* mgr, const char* path, const char* path2, Resour
         }
         case SOUND_WAV:
         case SOUND_STREAM:
+        case FONT: {
+            FontManager* fontManager = FontManager::GetInstance();
+            fontManager->LoadFont(path, fsize);
+            res->data.i = fontManager->fontTexture_1;
+            break;
+        }
         default:
             DEBUG_ERROR("Unknown resource type for: %s\n", path);
             return NULL;
@@ -138,7 +145,6 @@ Resource* load(ResourceManager* mgr, const char* path, const char* path2, Resour
 //@TODO for resource manager remove manuall memory management 
 //use new and use std::unordered_map<class Kty, class Ty> and use names
 Resource* ResourceManager::getResourceByName(const char* name) {
-    DEBUG_LOG("Currently getting resource name %s\n", name);
     return resources.ht_search(name);
 }
 

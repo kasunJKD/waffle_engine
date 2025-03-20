@@ -1,9 +1,14 @@
 #include "allocator.h"
+#include "defines.h"
 #include "engine.h" // IWYU pragma: keep
+#include "entity.h"
 #include "glad/glad.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // For glm::translate
 #include <glm/gtc/type_ptr.hpp>
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/ext/vector_float3.hpp"
+#include "glm/fwd.hpp"
 #include "glrenderSystem.h"
 #include "resourceManager.h"
 #include <iostream>
@@ -19,6 +24,8 @@
 #define SCREENSIZE_HEIGTH 540
 #define GAME_WIDTH 512
 #define GAME_HEIGTH 288
+#define WORLD_WIDTH 3072
+#define WORLD_HEIGHT 1728
 
 const uint32_t TARGET_FPS = 60;
 const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; 
@@ -31,8 +38,6 @@ float calculateDeltaTime() {
     lastTicks = currentTicks;
     return deltaTime;
 }
-
-GLuint quadShaderProgram;
 
 GLuint quadVAO, quadVBO;
 
@@ -56,6 +61,9 @@ void UpdateCamera(Camera &camera)
                                  glm::vec3(-camera.position.x, -camera.position.y, 0.0f));
 }
 
+
+glm::mat4 projection_w = glm::ortho(0.0f, (float)WORLD_WIDTH, 0.0f, (float)WORLD_HEIGHT);
+
 int main() {
     Window window;
     InputManager inputManager;
@@ -78,8 +86,9 @@ int main() {
     Resource* spritesheet = load(r_manager, "assets/tiled/testSpritesheet.png", nullptr, TEXTURE, "spritesheet");
     load(r_manager, "assets/test_game/testWorld1.png", nullptr, TEXTURE, "world1");
     load(r_manager, "assets/test_game/testWorld2.png", nullptr, TEXTURE, "world2");
-    Resource* quad_shader_resource = load(r_manager, "sandbox/shaders/quad.vert", "sandbox/shaders/quad.frag", SHADER, "quad");
-    quadShaderProgram = quad_shader_resource->data.i;
+    load(r_manager, "sandbox/shaders/quad.vert", "sandbox/shaders/quad.frag", SHADER, "quad");
+    load(r_manager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
+    Resource* text_shader = load(r_manager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text_shader");
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
@@ -114,6 +123,12 @@ int main() {
     we2->texture_name = "world2";
     we2->VAO = quadVAO;
 
+    Entity* text_1_e = create_entity("text1");
+    text_1_e->type = TEXT;
+    text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
+    text_1_e->scale = 1.0;
+    text_1_e->position = glm::vec3(0.0f, 0.0f, 0.0f);
+
     InitWorldQuad(we1);
     InitWorldQuad(we2);
 
@@ -144,6 +159,11 @@ int main() {
 
             std::cout << "P pressed! pauseActive is now " 
                 << (switch_world ? "true" : "false") << std::endl;
+        }
+
+        {
+            //text rendering
+            RenderText_f1(text_shader->data.i, "Text is rendering", text_1_e, &camera);
         }
 
         window.swapBuffers();

@@ -16,4 +16,6 @@ void InitWorldQuad(Entity* rc);
 
 void RenderWorldTexture(GLuint texture,  Entity *e,Camera *r, GLuint shader);
 
+void RenderText_f1(GLuint shader, std::string text, Entity *e, Camera *r);
+
 #endif //GLRENDERSYSTEM_H

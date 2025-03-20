@@ -59,6 +59,7 @@ target_include_directories(Engine PUBLIC
   "${CMAKE_SOURCE_DIR}/vendors/include"             # Common vendor headers
   "${CMAKE_SOURCE_DIR}/vendors/include/glad/include"  # GLAD headers
   "${CMAKE_SOURCE_DIR}/vendors/include/SDL2"          # SDL2 headers
+  "${CMAKE_SOURCE_DIR}/vendors/include/freetype"          # SDL2 headers
   "${CMAKE_SOURCE_DIR}/vendors"                       # Additional vendor sources
   "${CMAKE_SOURCE_DIR}/imgui"                         # ImGui headers
   "${CMAKE_SOURCE_DIR}/imgui/backends"                # ImGui backend headers
@@ -72,6 +73,7 @@ if(WIN32)
     "${CMAKE_SOURCE_DIR}/vendors/lib/SDL2"
     "${CMAKE_SOURCE_DIR}/vendors/lib/assimp"
     "${CMAKE_SOURCE_DIR}/vendors/lib/openal"
+    "${CMAKE_SOURCE_DIR}/vendors/lib/freetype"
   )
 
   # Link against SDL2, SDL2main, OpenAL32, and the Assimp library.
@@ -80,6 +82,7 @@ if(WIN32)
     SDL2main
     OpenAL32
     assimp-vc143-mt
+    freetype
   )
 endif()
 
@@ -102,6 +105,7 @@ target_include_directories(Sandbox PRIVATE
   "${CMAKE_SOURCE_DIR}/vendors"                      # Additional vendor sources
   "${CMAKE_SOURCE_DIR}/vendors/include"              # Common vendor headers
   "${CMAKE_SOURCE_DIR}/vendors/include/SDL2"         # SDL2 headers
+  "${CMAKE_SOURCE_DIR}/vendors/include/freetype"         # SDL2 headers
   "${CMAKE_SOURCE_DIR}/vendors/include/glad/include" # GLAD headers
   "${CMAKE_SOURCE_DIR}/imgui"                        # ImGui headers
   "${CMAKE_SOURCE_DIR}/imgui/backends"               # ImGui backend headers
@@ -116,6 +120,7 @@ if(WIN32)
   target_link_directories(Sandbox PRIVATE
     "${CMAKE_SOURCE_DIR}/vendors/lib/SDL2"
     "${CMAKE_SOURCE_DIR}/vendors/lib/assimp"
+    "${CMAKE_SOURCE_DIR}/vendors/lib/freetype"
     "${CMAKE_SOURCE_DIR}/vendors/lib/openal"
   )
 
@@ -124,6 +129,7 @@ if(WIN32)
     SDL2
     SDL2main
     OpenAL32
+    freetype
   )
 endif()
 

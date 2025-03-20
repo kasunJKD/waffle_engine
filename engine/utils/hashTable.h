@@ -1,8 +1,6 @@
 #ifndef HASHTABLE_H 
 #define HASHTABLE_H
 
-//TODO implement hashtable and add to RESOURCE Manager;;;
-
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>

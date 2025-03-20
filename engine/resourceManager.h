@@ -24,7 +24,7 @@ ResourceManager* createResourceManager(size_t arenaSize);
 int verifyResourcePath(const char* path);
 void destroyResourceManager(ResourceManager* mgr);
 void unloadResource(ResourceManager* mgr, Resource* resource);
-Resource* load(ResourceManager* mgr, const char* path,const char* path2, ResourceType type, const char* v);
+Resource* load(ResourceManager* mgr, const char* path,const char* path2, ResourceType type, const char* v, int fsize=0);
 
 
 #endif //REOSURCEMANAGER_H
