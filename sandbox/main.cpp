@@ -2,6 +2,7 @@
 #include "defines.h"
 #include "engine.h" // IWYU pragma: keep
 #include "entity.h"
+#include "font.h"
 #include "glad/glad.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // For glm::translate
@@ -127,7 +128,7 @@ int main() {
     text_1_e->type = TEXT;
     text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
     text_1_e->scale = 1.0;
-    text_1_e->position = glm::vec3(0.0f, 0.0f, 0.0f);
+    text_1_e->position = glm::vec3(0.0f, 20.0f, 0.0f);
 
     InitWorldQuad(we1);
     InitWorldQuad(we2);
@@ -175,6 +176,8 @@ int main() {
         }
     }
 
+    
+    FontManager::DestroyInstance();
     MEM::arena_destroy(arena);
     destroyResourceManager(r_manager);
     window.cleanUp();

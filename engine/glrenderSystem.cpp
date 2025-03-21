@@ -110,40 +110,46 @@ if (textColorLoc != -1) {
         glUniform1i(textAtlasLoc, 0); // Texture unit 0
     }
 
-    // ✅ Bind font texture to texture unit 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fontManager->fontTexture_1);
     glBindVertexArray(fontManager->VAO);
 
     std::vector<float> vertices;
- glm::vec3 textPos = e->position;
 
-    for (char c : text) {
-        Character ch = fontManager->Characters_font1[c];
+float cursorX = e->position.x;
 
-        float xpos = textPos.x + ch.bearing.x * e->scale;
-        float ypos = textPos.y - (ch.size.y - ch.bearing.y) * e->scale;
+for (char c : text) {
+    Character ch = fontManager->Characters_font1[c];
 
-        float w = ch.size.x * e->scale;
-        float h = ch.size.y * e->scale;
+    float xpos = cursorX + ch.bearing.x * e->scale;
+    //float ypos = baselineY - (ch.bearing.y + ch.size.y) * e->scale;
+float ypos = e->position.y - (ch.bearing.y * e->scale);
 
-        float u0 = ch.uv.x;
-        float u1 = u0 + (ch.size.x / fontManager->atlas_width);
+    float w = ch.size.x * e->scale;
+    float h = ch.size.y * e->scale;
 
-float quadVertices[6][4] = {
-    { xpos,     ypos + h,   u0, 1.0f }, // Flip here (1.0 instead of 0.0)
-    { xpos,     ypos,       u0, 0.0f }, // Flip here (0.0 instead of 1.0)
-    { xpos + w, ypos,       u1, 0.0f },
+   // float u0 = ch.uv.x;
+    //float u0 = ch.uv.x + (1.0f / fontManager->atlas_width); 
+    //float u1 = u0 + ((ch.size.x - 1) / fontManager->atlas_width); 
+ //   float u1 = u0 + (ch.size.x / fontManager->atlas_width);
+float uvPadding = 0.5f / fontManager->atlas_width; // Move UVs inward slightly
+float u0 = ch.uv.x + uvPadding;
+float u1 = u0 + ((ch.size.x - 1) / fontManager->atlas_width);
 
-    { xpos,     ypos + h,   u0, 1.0f },
-    { xpos + w, ypos,       u1, 0.0f },
-    { xpos + w, ypos + h,   u1, 1.0f }
-};
+    float quadVertices[6][4] = {
+        { xpos,     ypos + h,   u0, 1.0f },
+        { xpos,     ypos,       u0, 0.0f },
+        { xpos + w, ypos,       u1, 0.0f },
 
-        vertices.insert(vertices.end(), &quadVertices[0][0], &quadVertices[6][0]);
+        { xpos,     ypos + h,   u0, 1.0f },
+        { xpos + w, ypos,       u1, 0.0f },
+        { xpos + w, ypos + h,   u1, 1.0f }
+    };
 
-        textPos.x += (ch.advance * e->scale);
-    }
+    vertices.insert(vertices.end(), &quadVertices[0][0], &quadVertices[6][0]);
+
+    cursorX += ch.advance * e->scale;
+}
 
     glBindBuffer(GL_ARRAY_BUFFER, fontManager->VBO);
     glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());

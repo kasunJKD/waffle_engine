@@ -24,6 +24,7 @@ public:
     GLuint VAO;
     GLuint VBO;
     int atlas_width;
+    float maxBearingY = 0;
 
     // Get the global instance
     static FontManager* GetInstance() {

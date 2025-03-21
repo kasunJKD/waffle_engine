@@ -20,24 +20,33 @@ void FontManager::LoadFont(const char* fontPath, int fontSize) {
     // Compute atlas size
     int atlasWidth = 0, atlasHeight = 0;
     int rowHeight = 0;
+int maxBearingY = 0;
+int maxBottom = 0;
+const int padding = 2;
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     for (unsigned char c = 32; c < 128; c++) {
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) continue;
-        atlasWidth += face->glyph->bitmap.width;
+        maxBearingY = std::max(maxBearingY, face->glyph->bitmap_top);
+        atlasWidth += face->glyph->bitmap.width + padding;
+        int descender = face->glyph->bitmap.rows - face->glyph->bitmap_top;
         rowHeight = std::max<int>(rowHeight, face->glyph->bitmap.rows);
+        maxBottom = std::max(maxBottom, descender);
     }
-    atlasHeight = rowHeight;
+    atlasHeight = maxBearingY + maxBottom;
+    this->maxBearingY = maxBearingY;
 
     // Create a single large texture
     glGenTextures(1, &fontTexture_1);
     glBindTexture(GL_TEXTURE_2D, fontTexture_1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlasWidth, atlasHeight, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlasWidth, atlasHeight, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
 
     // Texture settings
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     glFinish(); //wtf opengl mention this before anything else
     
@@ -62,6 +71,7 @@ void FontManager::LoadFont(const char* fontPath, int fontSize) {
         Characters_font1[c] = ch;
         xOffset += g->bitmap.width;
     }
+
     atlas_width = atlasWidth;
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
@@ -72,7 +82,7 @@ void FontManager::InitTextRendering() {
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4 * 1000, NULL, GL_DYNAMIC_DRAW); // Reserve space for 1000 chars
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4 * 400, NULL, GL_DYNAMIC_DRAW); // Reserve space for 1000 chars
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
