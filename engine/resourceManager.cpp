@@ -1,10 +1,14 @@
 #include "resourceManager.h"
+#include "defines.h"
 #include "font.h"
 #include "shader.h"
 #include "textureManager.h"
 #include "debug.h"
 #include "utils/hashTable.h"
 #include <string>
+#include <filesystem>
+
+std::unordered_map<std::string, std::filesystem::file_time_type> shaderTimestamps;
 
 static int fileExists(const char* path) {
     FILE* file;
@@ -66,12 +70,12 @@ void destroyResourceManager(ResourceManager* mgr) {
 //     // The memory will be reclaimed only when the entire arena is reset or destroyed.
 // }
 
-Resource* load(ResourceManager* mgr, const char* path, const char* path2, ResourceType type, const char* v, int fsize) {
-    if (!mgr || !path)
+Resource* load(ResourceManager* mgr, const char* p, const char* path2, ResourceType type, const char* v, int fsize, bool hotreloaded) {
+    if (!mgr || !p)
         return NULL;
 
-    if (!verifyResourcePath(path)) {
-        DEBUG_ERROR("Resource path does not exist: %s\n", path);
+    if (!verifyResourcePath(p) && !hotreloaded) {
+        DEBUG_ERROR("Resource path does not exist: %s\n", p);
         return NULL;
     }
 
@@ -83,17 +87,17 @@ Resource* load(ResourceManager* mgr, const char* path, const char* path2, Resour
     // Allocate the Resource structure from the fixed arena.
     Resource* res = (Resource*)MEM::arena_alloc(mgr->arena, sizeof(Resource));
     if (!res) {
-        DEBUG_ERROR("Failed to allocate Resource structure for: %s\n", path);
+        DEBUG_ERROR("Failed to allocate Resource structure for: %s\n", p);
         return NULL;
     }
 
     res->type = type;
-    res->path = path;
+    res->path = p;
     res->name = v;
 
     switch (type) {
         case TEXTURE: {
-            GLuint texture_id = TextureManager::Instance().loadTextureFromFile(path, path, GL_RGBA, GL_RGBA, 0, 0);
+            GLuint texture_id = TextureManager::Instance().loadTextureFromFile(p, p, GL_RGBA, GL_RGBA, 0, 0);
 
             // Allocate memory for texture ID from the arena and store the pointer.
             GLuint* textureIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
@@ -104,25 +108,50 @@ Resource* load(ResourceManager* mgr, const char* path, const char* path2, Resour
             break;
         }
         case SHADER: {
-            shader sh = shader(path, path2);
+            shader sh = shader(p, path2);
+            
+            namespace fs = std::filesystem;
+            fs::path shaderPath(p);
+            std::string path = shaderPath.stem().string(); 
+
+            DEBUG_ASSERT(std::strcmp(v, path.c_str()) == 0, "name and path name should match (got '%s' vs '%s')", v, path.c_str());
 
             // Allocate memory for shader ID from the arena and store the pointer.
-            GLuint* shaderIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
-            *shaderIDPtr = sh.shaderProgramId;
+            if(hotreloaded){
+                if (!verifyResourcePath(p)) {
+                    DEBUG_ERROR("Resource path does not exist: %s\n", p);
+                    return NULL;
+                }
+                Resource* oldRes = mgr->getResourceByName(v);
+                if (!oldRes) {
+                    DEBUG_ERROR("Hot reload failed: shader not found: %s\n", v);
+                    DEBUG_ASSERT(oldRes, "oldResource is null");
+                    return NULL;
+                }
 
-            res->data.i = *shaderIDPtr;
+                GLuint* shaderIDPtr = (GLuint*)&oldRes->data.i;
+                *shaderIDPtr = sh.shaderProgramId;
+
+                res = oldRes;
+
+            } else {
+                GLuint* shaderIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
+                *shaderIDPtr = sh.shaderProgramId;
+
+                res->data.i = *shaderIDPtr;
+            }
             break;
         }
         case SOUND_WAV:
         case SOUND_STREAM:
         case FONT: {
             FontManager* fontManager = FontManager::GetInstance();
-            fontManager->LoadFont(path, fsize);
+            fontManager->LoadFont(p, fsize);
             res->data.i = fontManager->fontTexture_1;
             break;
         }
         default:
-            DEBUG_ERROR("Unknown resource type for: %s\n", path);
+            DEBUG_ERROR("Unknown resource type for: %s\n", p);
             return NULL;
     }
 
@@ -148,4 +177,55 @@ Resource* ResourceManager::getResourceByName(const char* name) {
     return resources.ht_search(name);
 }
 
+void reloadChangedShaders(ResourceManager* mgr, const std::string& shaderDir) {
+    namespace fs = std::filesystem;
 
+    for (const auto& entry : fs::directory_iterator(shaderDir)) {
+        const auto& path = entry.path();
+        if (!entry.is_regular_file()) continue;
+
+        std::string ext = path.extension().string();
+        if (ext != ".vert" && ext != ".frag") continue;
+
+        std::string shaderName = path.stem().string(); // e.g., "quad" from "quad.vert"
+        std::string baseName = shaderDir + shaderName;
+
+        std::string vertPath = baseName + ".vert";
+        std::string fragPath = baseName + ".frag";
+
+        if (!fs::exists(vertPath) || !fs::exists(fragPath))
+            continue; // both files must exist
+
+        auto vertTime = fs::last_write_time(vertPath);
+        auto fragTime = fs::last_write_time(fragPath);
+
+        bool changed = false;
+        std::string timeKey = shaderName; // one entry for each shader pair
+
+        if (shaderTimestamps[timeKey + "_v"] != vertTime) {
+            shaderTimestamps[timeKey + "_v"] = vertTime;
+            changed = true;
+        }
+        if (shaderTimestamps[timeKey + "_f"] != fragTime) {
+            shaderTimestamps[timeKey + "_f"] = fragTime;
+            changed = true;
+        }
+
+        if (changed) {
+            DEBUG_LOG("Reloading shader: %s\n", shaderName.c_str());
+
+            shader sh(vertPath.c_str(), fragPath.c_str());
+
+            Resource* res = mgr->getResourceByName(shaderName.c_str());
+            if (res) {
+                if (!res) {
+                    DEBUG_ERROR("Hot reload failed: shader not found: %s\n", shaderName.c_str());
+                    DEBUG_ASSERT(res, "hot shader reload. old resource invalid");
+                }
+
+                GLuint* shaderIDPtr = (GLuint*)&res->data.i;
+                *shaderIDPtr = sh.shaderProgramId;
+            }
+        }
+    }
+}

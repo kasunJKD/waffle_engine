@@ -34,8 +34,14 @@ void debug_error(const char* file, int line, const char* fmt, ...) {
 #endif
 }
 
-void debug_assert_failed(const char* file, int line, const char* expr) {
-#ifdef DEBUG_ENABLED
-    printf("[ASSERT FAILED] %s:%d: Assertion `%s` failed.\n", file, line, expr);
-#endif
+void debug_assert_failed(const char* file, int line, const char* expr, const char* msg, ...) {
+    fprintf(stderr, "[ASSERT FAILED] %s:%d: Expression (%s) failed.\n", file, line, expr);
+    if (msg) {
+        fprintf(stderr, "Message: ");
+        va_list args;
+        va_start(args, msg);
+        vfprintf(stderr, msg, args);
+        va_end(args);
+        fprintf(stderr, "\n");
+    }
 }

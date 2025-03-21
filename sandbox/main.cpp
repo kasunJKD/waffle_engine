@@ -1,8 +1,4 @@
-#include "allocator.h"
-#include "defines.h"
 #include "engine.h" // IWYU pragma: keep
-#include "entity.h"
-#include "font.h"
 #include "glad/glad.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // For glm::translate
@@ -10,13 +6,7 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
-#include "glrenderSystem.h"
-#include "resourceManager.h"
 #include <iostream>
-
-#ifdef DEBUG_ENABLED
-#include "debug.h"
-#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -42,11 +32,6 @@ float calculateDeltaTime() {
 
 GLuint quadVAO, quadVBO;
 
-// void UpdateCamera(Camera &camera, int screenWidth, int screenHeight) {
-//     camera.projection = glm::ortho(0.0f, static_cast<float>(screenWidth), 
-//                                    static_cast<float>(screenHeight), 0.0f, -10.0f, 10.0f);
-//     camera.view = glm::translate(glm::mat4(1.0f), glm::vec3(-camera.position.x, -camera.position.y, -5.0f));
-// }
 void UpdateCamera(Camera &camera)
 {
     // Orthographic 2D projection that is 512x288 in size
@@ -89,7 +74,7 @@ int main() {
     load(r_manager, "assets/test_game/testWorld2.png", nullptr, TEXTURE, "world2");
     load(r_manager, "sandbox/shaders/quad.vert", "sandbox/shaders/quad.frag", SHADER, "quad");
     load(r_manager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
-    Resource* text_shader = load(r_manager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text_shader");
+    load(r_manager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text");
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
@@ -139,6 +124,10 @@ int main() {
 
     bool switch_world = false;
     while (isRunning) {
+        #ifdef DEBUG_ENABLED
+            reloadChangedShaders(r_manager);
+        #endif
+
         uint32_t frameStart = SDL_GetTicks();
         //float dt = calculateDeltaTime();
         inputManager.update(isRunning);
@@ -164,7 +153,7 @@ int main() {
 
         {
             //text rendering
-            RenderText_f1(text_shader->data.i, "Text is rendering", text_1_e, &camera);
+            RenderText_f1(r_manager->getResourceByName("text")->data.i, "Text is rendering", text_1_e, &camera);
         }
 
         window.swapBuffers();

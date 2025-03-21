@@ -6,6 +6,7 @@
 #include "defines.h"
 #include <cstddef>
 #include <stdio.h>
+#include <string>
 
 
 #define MAX_RESOURCES 256
@@ -24,7 +25,9 @@ ResourceManager* createResourceManager(size_t arenaSize);
 int verifyResourcePath(const char* path);
 void destroyResourceManager(ResourceManager* mgr);
 void unloadResource(ResourceManager* mgr, Resource* resource);
-Resource* load(ResourceManager* mgr, const char* path,const char* path2, ResourceType type, const char* v, int fsize=0);
+Resource* load(ResourceManager* mgr, const char* p,const char* path2, ResourceType type, const char* v, int fsize=0, bool hotreloaded=false);
+
+void reloadChangedShaders(ResourceManager* mgr, const std::string& shaderDir = "sandbox/shaders/");
 
 
 #endif //REOSURCEMANAGER_H

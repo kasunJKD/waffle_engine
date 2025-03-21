@@ -10,5 +10,14 @@
 #include "resourceManager.h" // IWYU pragma: keep
 #include "inputManager.h" // IWYU pragma: keep
 #include "glrenderSystem.h" // IWYU pragma: keep
+#include "defines.h" // IWYU pragma: keep
+#include "font.h" // IWYU pragma: keep
+
+#ifdef DEBUG_ENABLED
+#include "debug.h" // IWYU pragma: keep
+
+#endif
+
+
 
 #endif // ENGINE_H
