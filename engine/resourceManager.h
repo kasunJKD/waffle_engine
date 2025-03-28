@@ -14,13 +14,13 @@
 struct ResourceManager{
     hashTable resources;
     size_t count;
-    MEM::MemoryArena* arena;
+    Pool_Allocator::Pool* pool;
 
     Resource* getResourceByName(const char* name);
 };
 
 
-ResourceManager* createResourceManager(size_t arenaSize);
+ResourceManager* createResourceManager(Pool_Allocator::Pool* pool);
 
 int verifyResourcePath(const char* path);
 void destroyResourceManager(ResourceManager* mgr);

@@ -1,3 +1,4 @@
+#include "allocator.h"
 #include "engine.h" // IWYU pragma: keep
 #include "glad/glad.h"
 #include <glm/glm.hpp>
@@ -8,15 +9,14 @@
 #include "glm/fwd.hpp"
 #include <iostream>
 
-#include <cstdio>
-#include <cstdlib>
-
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
 #define GAME_WIDTH 512
 #define GAME_HEIGTH 288
 #define WORLD_WIDTH 3072
 #define WORLD_HEIGHT 1728
+
+#define ENTITY_ARENA_SIZE    2* (1024 * 1024)
 
 const uint32_t TARGET_FPS = 60;
 const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; 
@@ -31,6 +31,9 @@ float calculateDeltaTime() {
 }
 
 GLuint quadVAO, quadVBO;
+Pool_Allocator::Pool persistant_storage; //for resources
+static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
+Temp_Allocator::TempArena entity_storage; //for entities
 
 void UpdateCamera(Camera &camera)
 {
@@ -60,15 +63,12 @@ int main() {
         DEBUG_ERROR("Failed to initialize window.");
         return -1;
     }
+    
+    Pool_Allocator::pool_init(&persistant_storage, temp_arena_memory, ENTITY_ARENA_SIZE, 64);
 
-    size_t arenaSize = 10 * (1024 * 1024); // For example, 1 MB.
-    MEM::MemoryArena* arena = MEM::arena_create(arenaSize);
-    if (!arena) {
-        DEBUG_ERROR("Failed to create MemoryArena.");
-        return 1;
-    }
+    Temp_Allocator::temp_arena_init(&entity_storage, temp_arena_memory, ENTITY_ARENA_SIZE);
 
-    ResourceManager* r_manager = createResourceManager(arenaSize);
+    ResourceManager* r_manager = createResourceManager(&persistant_storage);
     Resource* spritesheet = load(r_manager, "assets/tiled/testSpritesheet.png", nullptr, TEXTURE, "spritesheet");
     load(r_manager, "assets/test_game/testWorld1.png", nullptr, TEXTURE, "world1");
     load(r_manager, "assets/test_game/testWorld2.png", nullptr, TEXTURE, "world2");
@@ -86,7 +86,7 @@ int main() {
     RenderSystem rendersys;
     initRenderSystem(&rendersys, r_manager);
 
-    entity_system_init(arena);
+    entity_system_init(&entity_storage);
 
     // Initialize the camera
     Entity* cam = create_entity("camera");
@@ -167,10 +167,10 @@ int main() {
 
     
     FontManager::DestroyInstance();
-    MEM::arena_destroy(arena);
     destroyResourceManager(r_manager);
     window.cleanUp();
-    MEM::arena_print_stats(arena);
+
+    Temp_Allocator::temp_arena_free_all(&entity_storage);
 
     return 0;
 }

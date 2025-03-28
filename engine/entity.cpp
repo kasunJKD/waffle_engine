@@ -6,21 +6,24 @@
 static EntitySystem* entity_system = nullptr;
 static entityId g_nextEntityId = 1;
 
-void entity_system_init(MEM::MemoryArena* arena) {
-    if (!entity_system) {
-        void* memory = MEM::arena_alloc(arena, sizeof(EntitySystem));
-        if (!memory) {
-            DEBUG_ERROR("Failed to allocate memory for EntitySystem!");
-            return;
-        }
-
-        // Placement new to construct EntitySystem properly
-        entity_system = new (memory) EntitySystem();
-
-        DEBUG_LOG("Entity system initialized successfully");
-    } else {
+void entity_system_init(Temp_Allocator::TempArena* arena) {
+    if (entity_system) {
         DEBUG_ERROR("Entity system is already initialized");
+        return;
     }
+
+    void* memory = Temp_Allocator::temp_arena_alloc(
+        arena, sizeof(EntitySystem));
+
+    if (!memory) {
+        DEBUG_ERROR("Failed to allocate memory for EntitySystem!");
+        return;
+    }
+
+    entity_system = new (memory) EntitySystem(); // Placement new
+    entity_system->entity_count = 0;
+
+    DEBUG_LOG("Entity system initialized successfully");
 }
 
 Entity* create_entity(const char* name) {

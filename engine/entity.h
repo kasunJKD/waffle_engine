@@ -73,7 +73,7 @@ struct EntitySystem {
     size_t entity_count;
 };
 
-void entity_system_init(MEM::MemoryArena* arena);
+void entity_system_init(Temp_Allocator::TempArena* arena);
 Entity* create_entity(const char* name);
 Entity* create_entity(const char* name, EntityType eType, RenderSystem* r);
 void remove_entity(entityId id);

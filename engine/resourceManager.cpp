@@ -1,4 +1,5 @@
 #include "resourceManager.h"
+#include "allocator.h"
 #include "defines.h"
 #include "font.h"
 #include "shader.h"
@@ -20,30 +21,23 @@ static int fileExists(const char* path) {
     return 0;
 }
 
-ResourceManager* createResourceManager(size_t arenaSize) {
-    MEM::MemoryArena* r_arena = MEM::arena_create(arenaSize);
-    if (!r_arena) {
-        DEBUG_ERROR("Failed to create memory arena for ResourceManager.\n");
-        return NULL;
+ResourceManager* createResourceManager(Pool_Allocator::Pool* pool) {
+     if (!pool) {
+        DEBUG_ERROR("Pool is not initialized for ResourceManager.\n");
+        return nullptr;
     }
 
-    // Allocate ResourceManager from the arena
-    ResourceManager* mgr = (ResourceManager*)MEM::arena_alloc(r_arena, sizeof(ResourceManager));
+    ResourceManager* mgr = (ResourceManager*)Pool_Allocator::pool_alloc(pool);
     if (!mgr) {
-        DEBUG_ERROR("Failed to allocate ResourceManager from arena.\n");
-        MEM::arena_destroy(r_arena);
-        return NULL;
+        DEBUG_ERROR("Failed to allocate ResourceManager from pool.\n");
+        return nullptr;
     }
 
-    // Initialize ResourceManager
-    mgr->arena = r_arena;
+    mgr->pool = pool;
     mgr->count = 0;
+    mgr->resources = *mgr->resources.createTable(mgr->pool);
 
-    // Properly allocate the hash table
-    mgr->resources.arena = r_arena;  // Assign arena to hash table
-    mgr->resources = *mgr->resources.createTable();
-
-    return mgr;
+    return mgr;   
 }
 
 int verifyResourcePath(const char* path){
@@ -52,10 +46,8 @@ int verifyResourcePath(const char* path){
 
 void destroyResourceManager(ResourceManager* mgr) {
     if (!mgr) return;
-    // In a bump allocator, we cannot free individual allocations.
-    // Destroying the arena frees all allocated memory in one shot.
-    MEM::arena_destroy(mgr->arena);
     TextureManager::Instance().clear();
+    Pool_Allocator::pool_free_all(mgr->pool);
 }
 
 // void unloadResource(ResourceManager* mgr, Resource* resource) {
@@ -85,7 +77,7 @@ Resource* load(ResourceManager* mgr, const char* p, const char* path2, ResourceT
     }
 
     // Allocate the Resource structure from the fixed arena.
-    Resource* res = (Resource*)MEM::arena_alloc(mgr->arena, sizeof(Resource));
+     Resource* res = (Resource*)Pool_Allocator::pool_alloc(mgr->pool);
     if (!res) {
         DEBUG_ERROR("Failed to allocate Resource structure for: %s\n", p);
         return NULL;
@@ -98,49 +90,23 @@ Resource* load(ResourceManager* mgr, const char* p, const char* path2, ResourceT
     switch (type) {
         case TEXTURE: {
             GLuint texture_id = TextureManager::Instance().loadTextureFromFile(p, p, GL_RGBA, GL_RGBA, 0, 0);
-
-            // Allocate memory for texture ID from the arena and store the pointer.
-            GLuint* textureIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
-            *textureIDPtr = texture_id;
-
-            res->data.i = *textureIDPtr;
-            
+            res->data.i = texture_id;
             break;
         }
         case SHADER: {
-            shader sh = shader(p, path2);
-            
-            namespace fs = std::filesystem;
-            fs::path shaderPath(p);
-            std::string path = shaderPath.stem().string(); 
-
-            DEBUG_ASSERT(std::strcmp(v, path.c_str()) == 0, "name and path name should match (got '%s' vs '%s')", v, path.c_str());
-
-            // Allocate memory for shader ID from the arena and store the pointer.
-            if(hotreloaded){
-                if (!verifyResourcePath(p)) {
-                    DEBUG_ERROR("Resource path does not exist: %s\n", p);
-                    return NULL;
-                }
+            shader sh(p, path2);
+            if(hotreloaded) {
                 Resource* oldRes = mgr->getResourceByName(v);
                 if (!oldRes) {
-                    DEBUG_ERROR("Hot reload failed: shader not found: %s\n", v);
-                    DEBUG_ASSERT(oldRes, "oldResource is null");
-                    return NULL;
+                    DEBUG_ERROR("Hot reload failed: shader not found: %s \n", v);
+                    return nullptr;
                 }
-
-                GLuint* shaderIDPtr = (GLuint*)&oldRes->data.i;
-                *shaderIDPtr = sh.shaderProgramId;
-
+                oldRes->data.i = sh.shaderProgramId;
                 res = oldRes;
-
             } else {
-                GLuint* shaderIDPtr = (GLuint*)MEM::arena_alloc(mgr->arena, sizeof(GLuint));
-                *shaderIDPtr = sh.shaderProgramId;
-
-                res->data.i = *shaderIDPtr;
+                res->data.i = sh.shaderProgramId;
             }
-            break;
+            break; 
         }
         case SOUND_WAV:
         case SOUND_STREAM:
@@ -155,20 +121,10 @@ Resource* load(ResourceManager* mgr, const char* p, const char* path2, ResourceT
             return NULL;
     }
 
-    // Insert the resource into the hash table
     mgr->resources.ht_insert(v, res);
-
-    // Retrieve the stored resource from the map
-    Resource* storedResource = mgr->resources.ht_search(v);
-    if (!storedResource) {
-        DEBUG_ERROR("Failed to retrieve inserted resource: %s\n", v);
-        return NULL;
-    }
-
-    // Update count to reflect the new number of resources in the map
     mgr->count = mgr->resources.count;
 
-    return storedResource;
+    return mgr->resources.ht_search(v);
 }
 
 //@TODO for resource manager remove manuall memory management 

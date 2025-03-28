@@ -44,7 +44,7 @@ namespace Pool_Allocator {
 	};
 
 	void pool_init(Pool *p, void *back_buffer, size_t back_buffer_length,
-		size_t chunk_size, size_t chunk_alignment);
+		size_t chunk_size, size_t chunk_alignment = 8);
 	void pool_free_all(Pool *p);
         void *pool_alloc(Pool *p);
         void pool_free(Pool *p, void *ptr);
@@ -61,7 +61,9 @@ namespace Temp_Allocator {
 		size_t prev_offset;
 	};
 
-	void *temp_alloc(TempArena *t, size_t size);
+        void *temp_arena_alloc(TempArena *a, size_t size);
+        void temp_arena_init(TempArena *a, void *backing_buffer, size_t backing_buffer_length);
+        void temp_arena_free_all(TempArena*a);
 
 }
 
