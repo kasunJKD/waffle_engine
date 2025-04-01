@@ -1,4 +1,6 @@
 #include "allocator.h"
+#include "debug.h"
+#include "editor.h"
 #include "engine.h" // IWYU pragma: keep
 #include "glad/glad.h"
 #include <glm/glm.hpp>
@@ -35,6 +37,8 @@ Pool_Allocator::Pool persistant_storage; //for resources
 static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
 Temp_Allocator::TempArena entity_storage; //for entities
 
+Editor editor = {};
+
 void UpdateCamera(Camera &camera)
 {
     // Orthographic 2D projection that is 512x288 in size
@@ -47,11 +51,9 @@ void UpdateCamera(Camera &camera)
 
     // The view is just a translation that offsets by the camera’s position in the world
     camera.view = glm::translate(glm::mat4(1.0f), 
-                                 glm::vec3(-camera.position.x, -camera.position.y, 0.0f));
+                                 glm::vec3(-camera.position.x, -camera.position.y, camera.position.z));
 }
 
-
-glm::mat4 projection_w = glm::ortho(0.0f, (float)WORLD_WIDTH, 0.0f, (float)WORLD_HEIGHT);
 
 int main() {
     Window window;
@@ -123,6 +125,12 @@ int main() {
     bool isRunning = true;
 
     bool switch_world = false;
+
+    #ifdef DEBUG_ENABLED
+        editor.init_editor();
+    #endif
+    Camera* camptr = &camera;
+
     while (isRunning) {
         #ifdef DEBUG_ENABLED
             reloadChangedShaders(r_manager);
@@ -130,18 +138,29 @@ int main() {
 
         uint32_t frameStart = SDL_GetTicks();
         //float dt = calculateDeltaTime();
-        inputManager.update(isRunning);
+        inputManager.update(isRunning, &window);
 
         //###test rendering###########
 
-        glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+        glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         Entity *e = (switch_world) ? we1: we2;
 
+        #ifdef DEBUG_ENABLED
+            if (inputManager.isKeyPressed(SDLK_TAB)) {
+                editor.activate_editor();
+                editor.update_camera(&editor.camera);
+            } 
+            if(editor.active) {
+                editor.update_editor(&inputManager);
+                camptr = &editor.camera;
+            }    
+        #endif
+
         RenderWorldTexture(r_manager->getResourceByName(e->texture_name)->data.i,
                            e,
-                           &camera,
+                           camptr,
                            r_manager->getResourceByName(e->shader_name)->data.i);
 
         if (inputManager.isKeyPressed(SDLK_p)) {
@@ -153,7 +172,7 @@ int main() {
 
         {
             //text rendering
-            RenderText_f1(r_manager->getResourceByName("text")->data.i, "Text is rendering", text_1_e, &camera);
+            RenderText_f1(r_manager->getResourceByName("text")->data.i, "Text is rendering", text_1_e, camptr);
         }
 
         window.swapBuffers();

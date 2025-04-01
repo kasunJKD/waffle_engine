@@ -11,3 +11,31 @@ allocator logic
   stacks 
   ring buffers
   free list pool -> (bitmap allocator)
+
+|||||save data structure plan||||||
+
+save files -> 
+    1. all entity info + shaders path + textures path + etc 
+    2. save file + state changes 
+
+1. 
+[texture path]
+./assets/blah.png
+
+[shader path]
+./assets/blah.vert .frag
+
+[entities]
+id-1
+postion-0.1 0.1 0.2
+type-0
+etc..
+
+2.
+[entities]
+id-1
+
+[trigger]
+type-0
+active-1
+

@@ -7,12 +7,15 @@ void InputManager::init() {
     mouseButtonStates.clear();
     mouseX = 0;
     mouseY = 0;
+    
+    //int mouseWheelX = 0;
+    mouseWheelY = 0;
 
     movementDirection = glm::vec3(0.0f);
     loadDefaultKeyMappings();
 }
 
-void InputManager::update(bool& isRunning) {
+void InputManager::update(bool& isRunning, Window* window) {
     resetStates(); // Reset transitional states like Pressed and Released
 
     SDL_Event event;
@@ -29,6 +32,14 @@ void InputManager::update(bool& isRunning) {
             case SDL_MOUSEMOTION:
                 mouseX = event.motion.x;
                 mouseY = event.motion.y;
+                break;
+            case SDL_MOUSEWHEEL:
+                handleMouseEvent(event);
+                break;
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED && window) {
+                    window->resize(event.window.data1, event.window.data2);
+                }
                 break;
             case SDL_QUIT:
                 std::cout << "Quit event received." << std::endl;
@@ -81,6 +92,16 @@ bool InputManager::isMouseButtonReleased(Uint8 button) const {
     return it != mouseButtonStates.end() && it->second == KeyState::Released;
 }
 
+bool InputManager::isMouseWheelScroll(Uint8 button) const {
+    auto it = mouseButtonStates.find(button);
+    return it != mouseButtonStates.end() && it->second == KeyState::Scroll;
+}
+
+bool InputManager::isMouseButtonScrollFlip(Uint8 button) const {
+    auto it = mouseButtonStates.find(button);
+    return it != mouseButtonStates.end() && it->second == KeyState::ScrollFlip;
+}
+
 int InputManager::getMouseX() const {
     return mouseX;
 }
@@ -112,7 +133,16 @@ void InputManager::handleMouseEvent(const SDL_Event& event) {
         }
     } else if (event.type == SDL_MOUSEBUTTONUP) {
         mouseButtonStates[button] = KeyState::Released;
-    }
+    } else if (event.type == SDL_MOUSEWHEEL) {
+        if(event.wheel.y == 1) {
+            mouseButtonStates[event.type] = KeyState::Scroll;
+            mouseWheelY = event.wheel.y;
+
+        } if (event.wheel.y == -1) {
+            mouseButtonStates[event.type] = KeyState::ScrollFlip;
+            mouseWheelY = -event.wheel.y;
+        }
+    } 
 }
 
 void InputManager::resetStates() {
@@ -131,7 +161,11 @@ void InputManager::resetStates() {
             state = KeyState::Held;
         } else if (state == KeyState::Released) {
             state = KeyState::NoState;
+        } else if (state == KeyState::Scroll || state == KeyState::ScrollFlip) {
+            mouseWheelY = 0;
+            state = KeyState::NoState;
         }
+
     }
 }
 
@@ -144,4 +178,8 @@ void InputManager::loadDefaultKeyMappings() {
     keyMappings[SDLK_s] = glm::vec3(0.0f, -1.0f, 0.0f);  // Move down
     keyMappings[SDLK_a] = glm::vec3(-1.0f, 0.0f, 0.0f);  // Move left
     keyMappings[SDLK_d] = glm::vec3(1.0f, 0.0f, 0.0f);   // Move right
+}
+
+int InputManager::getMouseWheelY() const {
+    return mouseWheelY;
 }
