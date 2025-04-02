@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "editor.h"
 #include "engine.h" // IWYU pragma: keep
+#include "entity.h"
 #include "glad/glad.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // For glm::translate
@@ -9,6 +10,7 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
+#include "save.h"
 #include <iostream>
 
 #define SCREENSIZE_WIDTH 960
@@ -155,7 +157,12 @@ int main() {
             if(editor.active) {
                 editor.update_editor(&inputManager);
                 camptr = &editor.camera;
-            }    
+            } 
+            if (inputManager.isKeyPressed(SDLK_s)) {
+                    DEBUG_LOG("game file save fired");
+                    save_game_data("D:/Personal/waffle_2/waffle_engine/sandbox/save.adf", get_entity_manager());
+                } 
+
         #endif
 
         RenderWorldTexture(r_manager->getResourceByName(e->texture_name)->data.i,

@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "glrenderSystem.h"
 #include <cassert>
+
 static EntitySystem* entity_system = nullptr;
 static entityId g_nextEntityId = 1;
 
@@ -68,4 +69,9 @@ void remove_entity(entityId id) {
             return;
         }
     }
+}
+
+EntitySystem *get_entity_manager() {
+    DEBUG_ASSERT(entity_system != nullptr, "entity system not initialised to get");
+    return entity_system;
 }

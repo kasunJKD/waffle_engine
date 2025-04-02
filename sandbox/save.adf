@@ -1,1 +1,12 @@
 [texture path]
+../assets/tiled/testSpritesheet.png
+
+[shader path]
+../sandbox/shaders/quad 
+
+[entities]
+1
+2
+3
+4
+5

@@ -77,4 +77,5 @@ void entity_system_init(Temp_Allocator::TempArena* arena);
 Entity* create_entity(const char* name);
 Entity* create_entity(const char* name, EntityType eType, RenderSystem* r);
 void remove_entity(entityId id);
+EntitySystem *get_entity_manager();
 #endif //ENTITY_H
