@@ -4,7 +4,7 @@
 
 
 void save_game_data(const std::string& filename, EntitySystem *es);
-void load_game_data();
+void load_game_data(const std::string& filename, ResourceManager *r);
 void save_state_data();
 void load_state_data();
 

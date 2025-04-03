@@ -1,12 +1,49 @@
 [texture path]
-../assets/tiled/testSpritesheet.png
+assets/test_game/testWorld1.png
+assets/tiled/testSpritesheet.png
+assets/test_game/testWorld2.png
 
 [shader path]
-../sandbox/shaders/quad 
+sandbox/shaders/quad
+sandbox/shaders/text
+
+[font path]
+sandbox/fonts/Roboto.ttf
 
 [entities]
-1
-2
-3
-4
-5
+id=1
+type=4
+name=camera
+position=0.000000,0.000000,0.000000
+active=false
+
+id=2
+type=3
+name=world1
+position=0.000000,0.000000,0.000000
+texture=world1
+shader=quad
+active=false
+
+id=3
+type=3
+name=world2
+position=0.000000,0.000000,0.000000
+texture=world2
+shader=quad
+active=false
+
+id=4
+type=6
+name=text1
+position=0.000000,20.000000,0.000000
+scale=1.000000
+color=1.000000,0.000000,0.000000
+active=false
+
+id=5
+type=4
+name=camera_editor
+position=0.000000,0.000000,0.000000
+active=false
+

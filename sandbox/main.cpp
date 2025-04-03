@@ -73,6 +73,8 @@ int main() {
     Temp_Allocator::temp_arena_init(&entity_storage, temp_arena_memory, ENTITY_ARENA_SIZE);
 
     ResourceManager* r_manager = createResourceManager(&persistant_storage);
+    load_game_data("D:/Personal/waffle_2/waffle_engine/sandbox/save.adf", r_manager);
+
     Resource* spritesheet = load(r_manager, "assets/tiled/testSpritesheet.png", nullptr, TEXTURE, "spritesheet");
     load(r_manager, "assets/test_game/testWorld1.png", nullptr, TEXTURE, "world1");
     load(r_manager, "assets/test_game/testWorld2.png", nullptr, TEXTURE, "world2");
@@ -139,7 +141,7 @@ int main() {
         #endif
 
         uint32_t frameStart = SDL_GetTicks();
-        //float dt = calculateDeltaTime();
+        float dt = calculateDeltaTime();
         inputManager.update(isRunning, &window);
 
         //###test rendering###########
@@ -151,18 +153,23 @@ int main() {
 
         #ifdef DEBUG_ENABLED
             if (inputManager.isKeyPressed(SDLK_TAB)) {
-                editor.activate_editor();
-                editor.update_camera(&editor.camera);
+                if (!editor.active) {
+                    camptr = &editor.camera;
+                    editor.activate_editor();
+                } else {
+                    DEBUG_LOG("editor deactivated");
+                    camptr = &camera;
+                    editor.active = false;
+                }
             } 
             if(editor.active) {
-                editor.update_editor(&inputManager);
+                editor.update_editor(&inputManager, dt);
                 camptr = &editor.camera;
             } 
-            if (inputManager.isKeyPressed(SDLK_s)) {
+            if (inputManager.isKeyPressed(SDLK_q)) {
                     DEBUG_LOG("game file save fired");
                     save_game_data("D:/Personal/waffle_2/waffle_engine/sandbox/save.adf", get_entity_manager());
                 } 
-
         #endif
 
         RenderWorldTexture(r_manager->getResourceByName(e->texture_name)->data.i,

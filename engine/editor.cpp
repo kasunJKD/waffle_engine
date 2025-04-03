@@ -44,9 +44,10 @@ void Editor::init_editor() {
 //     }
 //
 // }
-void Editor::update_editor(InputManager* i) {
-        float zoomSpeed = 50.0f;
-        int scrollY = i->getMouseWheelY();
+void Editor::update_editor(InputManager* i, float dt) {
+    float zoomSpeed = 50.0f;
+    int scrollY = i->getMouseWheelY();
+    float moveSpeed = 100.0f;
 
     if(i->isMouseButtonScrollFlip((Uint8)SDL_MOUSEWHEEL)) {
         if (scrollY != 0) {
@@ -81,4 +82,19 @@ void Editor::update_editor(InputManager* i) {
             DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
         }
     }
+
+    if(i->isKeyPressed(SDLK_d) || i->isKeyHeld(SDLK_d)) {
+        camera.position.x += moveSpeed * dt;
+    }
+    if(i->isKeyPressed(SDLK_a) || i->isKeyHeld(SDLK_a)) {
+        camera.position.x -= moveSpeed * dt;
+    }
+    if(i->isKeyPressed(SDLK_w) || i->isKeyHeld(SDLK_w)) {
+        camera.position.y -= moveSpeed * dt;
+    }
+    if(i->isKeyPressed(SDLK_s) || i->isKeyHeld(SDLK_s)) {
+        camera.position.y += moveSpeed * dt;
+    }
+
+    update_camera(&camera);
 }
