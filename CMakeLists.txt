@@ -53,6 +53,14 @@ file(GLOB_RECURSE ENGINE_SOURCES
   "${CMAKE_SOURCE_DIR}/engine/*.cpp"
   "${CMAKE_SOURCE_DIR}/engine/*.h"
   "${CMAKE_SOURCE_DIR}/vendors/include/glad/src/glad.c"
+
+"${CMAKE_SOURCE_DIR}/vendors/imgui/imgui.cpp"
+"${CMAKE_SOURCE_DIR}/vendors/imgui/imgui_draw.cpp"
+"${CMAKE_SOURCE_DIR}/vendors/imgui/imgui_tables.cpp"
+"${CMAKE_SOURCE_DIR}/vendors/imgui/imgui_widgets.cpp"
+"${CMAKE_SOURCE_DIR}/vendors/imgui/imgui_demo.cpp" # Optional
+"${CMAKE_SOURCE_DIR}/vendors/imgui/backends/imgui_impl_sdl2.cpp"
+"${CMAKE_SOURCE_DIR}/vendors/imgui/backends/imgui_impl_opengl3.cpp"
 )
 
 add_library(Engine STATIC ${ENGINE_SOURCES})
@@ -64,7 +72,7 @@ target_include_directories(Engine PUBLIC
   "${CMAKE_SOURCE_DIR}/vendors/include/SDL2"          # SDL2 headers
   "${CMAKE_SOURCE_DIR}/vendors/include/freetype"          # SDL2 headers
   "${CMAKE_SOURCE_DIR}/vendors"                       # Additional vendor sources
-  "${CMAKE_SOURCE_DIR}/imgui"                         # ImGui headers
+  "${CMAKE_SOURCE_DIR}/vendors/imgui"                         # ImGui headers
   "${CMAKE_SOURCE_DIR}/imgui/backends"                # ImGui backend headers
   "${CMAKE_SOURCE_DIR}/vendors/include/assimp"        # Assimp headers
 )
@@ -110,7 +118,7 @@ target_include_directories(Sandbox PRIVATE
   "${CMAKE_SOURCE_DIR}/vendors/include/SDL2"         # SDL2 headers
   "${CMAKE_SOURCE_DIR}/vendors/include/freetype"         # SDL2 headers
   "${CMAKE_SOURCE_DIR}/vendors/include/glad/include" # GLAD headers
-  "${CMAKE_SOURCE_DIR}/imgui"                        # ImGui headers
+  "${CMAKE_SOURCE_DIR}/vendors/imgui"                        # ImGui headers
   "${CMAKE_SOURCE_DIR}/imgui/backends"               # ImGui backend headers
   "${CMAKE_SOURCE_DIR}/vendors/include/assimp"       # Assimp headers
 )

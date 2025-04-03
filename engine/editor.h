@@ -11,7 +11,7 @@ struct Editor {
 	void update_camera(Camera *camera);
 	void activate_editor();
 	void init_editor();
-	//void deinit_editor();
+	void deinit_editor();
 	void update_editor(InputManager *i, float dt);
 };
 

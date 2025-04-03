@@ -1,6 +1,9 @@
 #include "inputManager.h"
 #include <iostream>
 
+#ifdef DEBUG_ENABLED
+#include "backends/imgui_impl_sdl2.h"
+#endif
 void InputManager::init() {
     // Initialize any input-related state if needed
     keyStates.clear();
@@ -20,6 +23,10 @@ void InputManager::update(bool& isRunning, Window* window) {
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        #ifdef DEBUG_ENABLED    
+            ImGui_ImplSDL2_ProcessEvent(&event); // Forward your event to backend
+        #endif
+
         switch (event.type) {
             case SDL_KEYDOWN:
             case SDL_KEYUP:

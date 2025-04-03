@@ -3,6 +3,12 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
 
+#ifdef DEBUG_ENABLED
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_opengl3.h"
+#endif
+
 void Editor::update_camera(Camera *camera)
 {
     
@@ -97,4 +103,18 @@ void Editor::update_editor(InputManager* i, float dt) {
     }
 
     update_camera(&camera);
+
+
+    // Start the Dear ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow(); 
+}
+
+
+void Editor::deinit_editor() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
 }

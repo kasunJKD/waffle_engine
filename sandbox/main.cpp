@@ -13,6 +13,12 @@
 #include "save.h"
 #include <iostream>
 
+
+#ifdef DEBUG_ENABLED
+#include "imgui.h"
+#include "backends/imgui_impl_opengl3.h"
+#endif
+
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
 #define GAME_WIDTH 512
@@ -137,6 +143,8 @@ int main() {
 
     while (isRunning) {
         #ifdef DEBUG_ENABLED
+            
+            //@hotreload shaders
             reloadChangedShaders(r_manager);
         #endif
 
@@ -189,6 +197,13 @@ int main() {
             RenderText_f1(r_manager->getResourceByName("text")->data.i, "Text is rendering", text_1_e, camptr);
         }
 
+        #ifdef DEBUG_ENABLED
+            if(editor.active) {
+                ImGui::Render();
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            }
+        #endif
+
         window.swapBuffers();
 
         // Frame limiting
@@ -199,6 +214,9 @@ int main() {
     }
 
     
+    #ifdef DEBUG_ENABLED
+        editor.deinit_editor();
+    #endif
     FontManager::DestroyInstance();
     destroyResourceManager(r_manager);
     window.cleanUp();

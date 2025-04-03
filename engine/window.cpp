@@ -1,5 +1,10 @@
 #include "window.h"
 #include <iostream>
+#ifdef DEBUG_ENABLED
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_opengl3.h"
+#endif
 
 bool Window::init(const std::string& windowTitle, int windowWidth, int windowHeight)
 {
@@ -49,6 +54,20 @@ bool Window::init(const std::string& windowTitle, int windowWidth, int windowHei
 
     // Enable V-Sync
     SDL_GL_SetSwapInterval(1);
+
+    #ifdef DEBUG_ENABLED
+        // Setup Dear ImGui context
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+
+        // Setup Platform/Renderer backends
+        ImGui_ImplSDL2_InitForOpenGL(sdlWindow, glContext);
+        ImGui_ImplOpenGL3_Init();
+    #endif
 
     // Set OpenGL viewport
     glViewport(0, 0, width, height);
