@@ -1,5 +1,6 @@
 #ifndef ENTITY_H
 #define ENTITY_H
+#include "glm/fwd.hpp"
 #include "resourceManager.h"
 #pragma once
 #include <cstdint>
@@ -27,6 +28,7 @@ enum WorldType {
     WORLD2
 };
 
+
 struct Entity {
     entityId id;
     EntityType type;
@@ -46,10 +48,11 @@ struct Entity {
     entityId parent_id;
     std::vector<Entity*> children;
 
+    Sprite *sprite;
+
     bool active;
-
-
 };
+
 
 struct Camera: Entity {
     glm::mat4 projection;
@@ -66,6 +69,9 @@ struct RenderSystem {
     int count;
 
     ResourceManager* resManager;
+GLuint spriteVAO;
+    GLuint spriteVBO;
+    GLuint spriteEBO;
 };
 
 struct EntitySystem {

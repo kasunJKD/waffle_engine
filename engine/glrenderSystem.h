@@ -18,4 +18,6 @@ void RenderWorldTexture(GLuint texture,  Entity *e,Camera *r, GLuint shader);
 
 void RenderText_f1(GLuint shader, std::string text, Entity *e, Camera *r);
 
+void renderSprite(GLuint shader, Entity* e, Camera* camera, RenderSystem* rs);
+
 #endif //GLRENDERSYSTEM_H

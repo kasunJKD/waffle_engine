@@ -12,6 +12,7 @@
 #include "glrenderSystem.h" // IWYU pragma: keep
 #include "defines.h" // IWYU pragma: keep
 #include "font.h" // IWYU pragma: keep
+#include "sprite.h" //IWYU pragma: keep
 
 #ifdef DEBUG_ENABLED
 #include "debug.h" // IWYU pragma: keep

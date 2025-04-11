@@ -20,6 +20,40 @@ void initRenderSystem(RenderSystem* rs, ResourceManager* rm) {
     //init Text rendering
     FontManager* fontManager = FontManager::GetInstance();
     fontManager->InitTextRendering();
+
+    //init Sprite rendering TODO
+// Init Sprite Rendering Quad
+    float quadVertices[] = {
+        // positions    // texCoords
+        0.0f, 1.0f,     0.0f, 1.0f, // top-left
+        1.0f, 1.0f,     1.0f, 1.0f, // top-right
+        1.0f, 0.0f,     1.0f, 0.0f, // bottom-right
+        0.0f, 0.0f,     0.0f, 0.0f  // bottom-left
+    };
+
+    unsigned int quadIndices[] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    glGenVertexArrays(1, &rs->spriteVAO);
+    glGenBuffers(1, &rs->spriteVBO);
+    glGenBuffers(1, &rs->spriteEBO);
+
+    glBindVertexArray(rs->spriteVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, rs->spriteVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rs->spriteEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
     
 }
 
@@ -169,3 +203,43 @@ float u1 = u0 + ((ch.size.x - 1) / fontManager->atlas_width);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+
+void renderSprite(GLuint shader, Entity* e, Camera* camera, RenderSystem* rs) {
+    if (!e || !e->sprite) return;
+
+    glUseProgram(shader);
+    CheckGLError("glUseProgram");
+
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(camera->projection));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(camera->view));
+
+    int framesPerRow = e->sprite->sheet_size.x / e->sprite->frame_size.x;
+    int actualFrame = e->sprite->start_frame;  // Use current_frame for animation
+    int frameX = actualFrame % framesPerRow;
+    int frameY = actualFrame / framesPerRow;
+
+    glm::vec2 uvOffset = {
+        (frameX * e->sprite->frame_size.x + e->sprite->pixel_offset.x) / e->sprite->sheet_size.x,
+        (frameY * e->sprite->frame_size.y + e->sprite->pixel_offset.y) / e->sprite->sheet_size.y
+    };
+
+    glm::vec2 uvSize = {
+        e->sprite->frame_size.x / e->sprite->sheet_size.x,
+        e->sprite->frame_size.y / e->sprite->sheet_size.y
+    };
+
+    glUniform2f(glGetUniformLocation(shader, "u_uv"), uvOffset.x, uvOffset.y);
+    glUniform2f(glGetUniformLocation(shader, "u_uv_size"), uvSize.x, uvSize.y);
+
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), e->position);
+    model = glm::scale(model, glm::vec3(e->sprite->frame_size * e->scale, 1.0f));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, e->sprite->texture_id);
+    glUniform1i(glGetUniformLocation(shader, "u_tex"), 0);
+
+    glBindVertexArray(rs->spriteVAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}

@@ -13,6 +13,7 @@ struct Editor {
 	void init_editor();
 	void deinit_editor();
 	void update_editor(InputManager *i, float dt);
+	void draw_editor();
 };
 
 #endif //ENTITY_H

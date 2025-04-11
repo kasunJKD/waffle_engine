@@ -35,7 +35,7 @@ ResourceManager* createResourceManager(Pool_Allocator::Pool* pool) {
 
     mgr->pool = pool;
     mgr->count = 0;
-    mgr->resources = *mgr->resources.createTable(mgr->pool);
+    mgr->resources = *createTable(mgr->pool);
 
     return mgr;   
 }
@@ -124,13 +124,13 @@ Resource* load(ResourceManager* mgr, const char* p, const char* path2, ResourceT
     mgr->resources.ht_insert(v, res);
     mgr->count = mgr->resources.count;
 
-    return mgr->resources.ht_search(v);
+    return mgr->resources.ht_search_resource(v);
 }
 
 //@TODO for resource manager remove manuall memory management 
 //use new and use std::unordered_map<class Kty, class Ty> and use names
 Resource* ResourceManager::getResourceByName(const char* name) {
-    return resources.ht_search(name);
+    return resources.ht_search_resource(name);
 }
 
 void reloadChangedShaders(ResourceManager* mgr, const std::string& shaderDir) {

@@ -39,3 +39,28 @@ id-1
 type-0
 active-1
 
+
+//EDITOR
+screens ->
+  Entity Selection screen
+    Set Animations
+    Set Positions
+    Set Collisions
+  
+  DrawTool
+    DrawTiles
+    Set Tiles with animation players (frame, count, direction , size)
+
+  All Entity
+
+  Trigger sets
+
+  Enemies
+
+TODO
+1.DrawSprites ----> inprogress
+2.Lights
+3.Zbuffer (depth buffer)
+4.Collisions
+
+

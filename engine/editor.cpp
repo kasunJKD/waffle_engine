@@ -68,7 +68,7 @@ void Editor::update_editor(InputManager* i, float dt) {
 
             update_camera(&camera);
 
-            DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
+            //DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
         }
     }
 
@@ -85,7 +85,7 @@ void Editor::update_editor(InputManager* i, float dt) {
 
             update_camera(&camera);
 
-            DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
+            //DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
         }
     }
 
@@ -117,4 +117,10 @@ void Editor::deinit_editor() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
+}
+
+void Editor::draw_editor() {
+
+                ImGui::Render();
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

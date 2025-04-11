@@ -2,6 +2,8 @@
 #define DEFINES_H 
 
 #include "glad/glad.h"
+
+#include <glm/glm.hpp>
 enum ResourceType {
     TEXTURE,
     SHADER ,
@@ -24,4 +26,13 @@ struct Resource {
     size_t size;
 };
 
+struct Sprite {
+    GLuint texture_id;
+    glm::vec2 frame_size;
+    glm::ivec2 sheet_size;
+    int start_frame;
+    int frame_count;
+    float frame_duration;
+    glm::vec2 pixel_offset;
+};
 #endif //DEFINES_H

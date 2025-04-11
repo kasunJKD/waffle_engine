@@ -15,8 +15,6 @@
 
 
 #ifdef DEBUG_ENABLED
-#include "imgui.h"
-#include "backends/imgui_impl_opengl3.h"
 #endif
 
 #define SCREENSIZE_WIDTH 960
@@ -42,6 +40,7 @@ float calculateDeltaTime() {
 
 GLuint quadVAO, quadVBO;
 Pool_Allocator::Pool persistant_storage; //for resources
+Pool_Allocator::Pool persistant_storage_sp; //for resources TODO check Poolallocator
 static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
 Temp_Allocator::TempArena entity_storage; //for entities
 
@@ -87,11 +86,15 @@ int main() {
     load(r_manager, "sandbox/shaders/quad.vert", "sandbox/shaders/quad.frag", SHADER, "quad");
     load(r_manager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
     load(r_manager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text");
+    load(r_manager, "sandbox/shaders/sprite.vert", "sandbox/shaders/sprite.frag", SHADER, "sprite");
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
         return -1;
     }
+
+    SpriteManager* sprite_m = createSpriteManager(&persistant_storage, r_manager);
+    loadSpritesMapping(sprite_m);
 
     //######test world rendering##########
     //#############################
@@ -126,6 +129,15 @@ int main() {
     text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
     text_1_e->scale = 1.0;
     text_1_e->position = glm::vec3(0.0f, 20.0f, 0.0f);
+
+    Entity* player = create_entity("player");
+    player->type = PLAYER;
+    player->scale = 1.0;
+    player->position = glm::vec3(0.0f, 30.0f, 0.0f);
+    player->sprite = sprite_m->getSprite("player");
+    player->active = true;
+    player->shader_name = "sprite";
+    player->VAO = quadVAO;
 
     InitWorldQuad(we1);
     InitWorldQuad(we2);
@@ -197,10 +209,13 @@ int main() {
             RenderText_f1(r_manager->getResourceByName("text")->data.i, "Text is rendering", text_1_e, camptr);
         }
 
+        {
+            renderSprite(r_manager->getResourceByName("sprite")->data.i, player, camptr, &rendersys);
+        }
+
         #ifdef DEBUG_ENABLED
             if(editor.active) {
-                ImGui::Render();
-                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                editor.draw_editor();
             }
         #endif
 

@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <variant>
 #include "../defines.h"
 #include "../allocator.h"
 
@@ -12,7 +13,7 @@
 
 struct hitem {
     const char* key;
-    Resource* data;
+    std::variant<Sprite*, Resource*> data;
 };
 
 // No collision resolution like buckets implemented
@@ -36,33 +37,13 @@ struct hashTable {
         item->data = data;
         return item;
     }
-
-hashTable* createTable(Pool_Allocator::Pool* pool_ref) {
-    if (!pool_ref) {
-        printf("Error: Pool is NULL. Cannot create hashTable.\n");
-        return nullptr;
+    hitem* createItem(const char* key, Sprite* data) {
+        hitem* item = (hitem*)Pool_Allocator::pool_alloc(pool);
+        item->key = key;
+        item->data = data;
+        return item;
     }
 
-    hashTable* table = (hashTable*)Pool_Allocator::pool_alloc(pool_ref);
-    if (!table) {
-        printf("Error: Failed to allocate hashTable.\n");
-        return nullptr;
-    }
-
-    table->size = CAPACITY;
-    table->count = 0;
-    table->pool = pool_ref;
-
-    // Allocate large array from heap
-    table->items = (hitem**)malloc(sizeof(hitem*) * CAPACITY);
-    if (!table->items) {
-        printf("Error: Failed to allocate hashTable items array.\n");
-        return nullptr;
-    }
-
-    memset(table->items, 0, sizeof(hitem*) * CAPACITY);
-    return table;
-}
 
     bool checkKeyExists(const char* key) {
         for (size_t i = 0; i < size; i++) {
@@ -104,21 +85,69 @@ hashTable* createTable(Pool_Allocator::Pool* pool_ref) {
         items[index] = item;
         count++;
     }
-    
-    Resource* ht_search(const char* key) {
-        size_t index = hash_function(key);
-        size_t start_index = index;
-
-        while (items[index] != nullptr) {
-            if (strcmp(items[index]->key, key) == 0)
-                return items[index]->data;
-
-            index = (index + 1) % size;
-            if (index == start_index) break; // prevent infinite loop
+    void ht_insert(const char* key, Sprite* value) {
+        if (count == size) {
+            printf("Insert Error: Hash Table is full\n");
+            return;
         }
-        return nullptr;
+
+        size_t index = hash_function(key);
+
+        while (items[index] != nullptr && strcmp(items[index]->key, key) != 0) {
+            index = (index + 1) % size;
+        }
+
+        if (items[index] != nullptr) {
+            items[index]->data = value;
+            return;
+        }
+
+        hitem* item = createItem(key, value);
+        items[index] = item;
+        count++;
     }
+    
+Resource* ht_search_resource(const char* key) {
+    size_t index = hash_function(key);
+    size_t start_index = index;
+
+    while (items[index] != nullptr) {
+        if (strcmp(items[index]->key, key) == 0) {
+            // Check if the stored value is a Resource*
+            if (std::holds_alternative<Resource*>(items[index]->data)) {
+                return std::get<Resource*>(items[index]->data);
+            } else {
+                return nullptr; // key exists but value is not a Resource*
+            }
+        }
+
+        index = (index + 1) % size;
+        if (index == start_index) break;
+    }
+
+    return nullptr;
+}
+Sprite* ht_search_sprite(const char* key) {
+    size_t index = hash_function(key);
+    size_t start_index = index;
+
+    while (items[index] != nullptr) {
+        if (strcmp(items[index]->key, key) == 0) {
+            if (std::holds_alternative<Sprite*>(items[index]->data)) {
+                return std::get<Sprite*>(items[index]->data);
+            } else {
+                return nullptr;
+            }
+        }
+
+        index = (index + 1) % size;
+        if (index == start_index) break;
+    }
+
+    return nullptr;
+}
 };
 
+hashTable* createTable(Pool_Allocator::Pool* pool_ref);
 #endif // HASHTABLE_H
 
