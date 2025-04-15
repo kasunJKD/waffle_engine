@@ -16,6 +16,9 @@ void CheckGLError(const std::string& message) {
 void initRenderSystem(RenderSystem* rs, ResourceManager* rm) {
     rs->count = 0;
     rs->resManager = rm;
+    
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 
     //init Text rendering
     FontManager* fontManager = FontManager::GetInstance();
@@ -35,6 +38,7 @@ void initRenderSystem(RenderSystem* rs, ResourceManager* rm) {
         0, 1, 2,
         2, 3, 0
     };
+
 
     glGenVertexArrays(1, &rs->spriteVAO);
     glGenBuffers(1, &rs->spriteVBO);
@@ -130,6 +134,11 @@ void RenderText_f1(GLuint shader, std::string text, Entity *e, Camera *r)
     FontManager* fontManager = FontManager::GetInstance();
     glUseProgram(shader);
 
+ // glEnable(GL_DEPTH_TEST);
+ //    glDepthMask(GL_TRUE); // allow writing to depth buffer
+ //    glEnable(GL_BLEND);
+ //    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(r->projection));
     glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(r->view));
     glUniform3fv(glGetUniformLocation(shader, "worldPosition"), 1, glm::value_ptr(e->position));
@@ -191,8 +200,6 @@ float u1 = u0 + ((ch.size.x - 1) / fontManager->atlas_width);
     
     GLsizei vertexCount = vertices.size() / 4;
     if (vertexCount > 0) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         //glDisable(GL_BLEND);
     } else {

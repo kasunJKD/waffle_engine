@@ -58,9 +58,10 @@ screens ->
   Enemies
 
 TODO
-1.DrawSprites ----> inprogress
+1.DrawSprites ----> done 
 2.Lights
-3.Zbuffer (depth buffer)
+3.Zbuffer (depth buffer) ---> done -> (bug :: inverted depth z higher z means closer)
+  editor-> remove ortho , add perspective
 4.Collisions
 
 

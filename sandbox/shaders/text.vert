@@ -7,9 +7,7 @@ uniform mat4 view;
 uniform vec3 worldPosition; // The world-space position of the text
 
 void main() {
-    vec3 finalPos = worldPosition + vec3(vertex.xy, 0.0); // Convert vec2 to vec3
-    vec4 worldPos = vec4(finalPos, 1.0);
-    gl_Position = projection * view * worldPos;
+    vec3 finalPos = vec3(vertex.xy + worldPosition.xy, worldPosition.z); // now uses z
+    gl_Position = projection * view * vec4(finalPos, 1.0);
     TexCoords = vertex.zw;
 }
-

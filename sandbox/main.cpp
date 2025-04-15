@@ -13,7 +13,6 @@
 #include "save.h"
 #include <iostream>
 
-
 #ifdef DEBUG_ENABLED
 #endif
 
@@ -53,7 +52,7 @@ void UpdateCamera(Camera &camera)
     camera.projection = glm::ortho(
         0.0f, camera.width,    // left, right
         camera.height, 0.0f,   // bottom, top  (note the flip if you like Y up vs. Y down)
-        -1.0f, 1.0f
+        -10.0f, 10.0f
     );
 
     // The view is just a translation that offsets by the camera’s position in the world
@@ -128,12 +127,12 @@ int main() {
     text_1_e->type = TEXT;
     text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
     text_1_e->scale = 1.0;
-    text_1_e->position = glm::vec3(0.0f, 20.0f, 0.0f);
+    text_1_e->position = glm::vec3(0.0f, 20.0f, 1.0f);
 
     Entity* player = create_entity("player");
     player->type = PLAYER;
     player->scale = 1.0;
-    player->position = glm::vec3(0.0f, 30.0f, 0.0f);
+    player->position = glm::vec3(0.0f, 10.0f, 5.0f);
     player->sprite = sprite_m->getSprite("player");
     player->active = true;
     player->shader_name = "sprite";
