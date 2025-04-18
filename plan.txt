@@ -58,10 +58,16 @@ screens ->
   Enemies
 
 TODO
-1.DrawSprites ----> done 
+1.DrawSprites ----> done
 2.Lights
 3.Zbuffer (depth buffer) ---> done -> (bug :: inverted depth z higher z means closer)
   editor-> remove ortho , add perspective
-4.Collisions
+4.Collisions -> 
+5.Animation types -> STATE machine, AUTO PLAY
+
+//rewrite
+editor -> perspective cam
+game -> ortho camera
+make the camera/cameras independent (not entities)
 
 

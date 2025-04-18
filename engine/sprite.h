@@ -7,6 +7,7 @@
 #include "allocator.h"
 #include "resourceManager.h"
 #include "utils/hashTable.h"
+#include <vector>
 
 struct SpriteManager {
     hashTable *spriteTable;
@@ -15,6 +16,7 @@ struct SpriteManager {
     ResourceManager* r_mgr;
 
     Sprite* getSprite(const char* name); 
+    std::vector<std::pair<std::string,Sprite*>> getAllSprites() const;
 };
 
 SpriteManager* createSpriteManager(Pool_Allocator::Pool* pool, ResourceManager* r_manager);

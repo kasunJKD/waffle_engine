@@ -11,10 +11,6 @@
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
 #include "save.h"
-#include <iostream>
-
-#ifdef DEBUG_ENABLED
-#endif
 
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
@@ -37,205 +33,200 @@ float calculateDeltaTime() {
     return deltaTime;
 }
 
-GLuint quadVAO, quadVBO;
-Pool_Allocator::Pool persistant_storage; //for resources
-Pool_Allocator::Pool persistant_storage_sp; //for resources TODO check Poolallocator
-static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
-Temp_Allocator::TempArena entity_storage; //for entities
-
-Editor editor = {};
-
 void UpdateCamera(Camera &camera)
 {
-    // Orthographic 2D projection that is 512x288 in size
-    // (left=0, right=512, top=0, bottom=288, near=-1, far=+1)
     camera.projection = glm::ortho(
         0.0f, camera.width,    // left, right
         camera.height, 0.0f,   // bottom, top  (note the flip if you like Y up vs. Y down)
         -10.0f, 10.0f
     );
 
-    // The view is just a translation that offsets by the camera’s position in the world
     camera.view = glm::translate(glm::mat4(1.0f), 
                                  glm::vec3(-camera.position.x, -camera.position.y, camera.position.z));
 }
 
-
-int main() {
+struct State {
     Window window;
     InputManager inputManager;
+    ResourceManager resourceManager;
+    SpriteManager spriteManager;
+    RenderSystem renderSystem;
+    EntitySystem entitiySystem;
+    
+    GLuint quadVAO, quadVBO;
+    Pool_Allocator::Pool persistant_storage; //for resources
+    Temp_Allocator::TempArena entity_storage; //for entities
 
+    #ifdef DEBUG_ENABLED
+        Editor editor;
+    #endif
 
-    // Initialize the window
-    if (!window.init("Sandbox", SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH)) {
+    Camera* camptr;
+    Camera camera;
+
+    bool isRunning;
+
+    Entity* player;
+    Entity* text_1;
+};
+
+static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
+State state = {};
+
+void init() {
+    if (!state.window.init("Game", SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH)) {
         DEBUG_ERROR("Failed to initialize window.");
-        return -1;
+        return;
     }
     
-    Pool_Allocator::pool_init(&persistant_storage, temp_arena_memory, ENTITY_ARENA_SIZE, 64);
+    Pool_Allocator::pool_init(&state.persistant_storage, temp_arena_memory, ENTITY_ARENA_SIZE, 64);
 
-    Temp_Allocator::temp_arena_init(&entity_storage, temp_arena_memory, ENTITY_ARENA_SIZE);
+    Temp_Allocator::temp_arena_init(&state.entity_storage, temp_arena_memory, ENTITY_ARENA_SIZE);
 
-    ResourceManager* r_manager = createResourceManager(&persistant_storage);
-    load_game_data("D:/Personal/waffle_2/waffle_engine/sandbox/save.adf", r_manager);
+    state.resourceManager = *createResourceManager(&state.persistant_storage);
+    
+    load_game_data("D:/Personal/waffle_2/waffle_engine/sandbox/save.adf", &state.resourceManager);
 
-    Resource* spritesheet = load(r_manager, "assets/tiled/testSpritesheet.png", nullptr, TEXTURE, "spritesheet");
-    load(r_manager, "assets/test_game/testWorld1.png", nullptr, TEXTURE, "world1");
-    load(r_manager, "assets/test_game/testWorld2.png", nullptr, TEXTURE, "world2");
-    load(r_manager, "sandbox/shaders/quad.vert", "sandbox/shaders/quad.frag", SHADER, "quad");
-    load(r_manager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
-    load(r_manager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text");
-    load(r_manager, "sandbox/shaders/sprite.vert", "sandbox/shaders/sprite.frag", SHADER, "sprite");
+    Resource* spritesheet = load(&state.resourceManager, "assets/tiled/testSpritesheet.png", nullptr, TEXTURE, "spritesheet");
+    load(&state.resourceManager, "assets/test_game/testWorld1.png", nullptr, TEXTURE, "world1");
+    load(&state.resourceManager, "assets/test_game/testWorld2.png", nullptr, TEXTURE, "world2");
+    load(&state.resourceManager, "sandbox/shaders/quad.vert", "sandbox/shaders/quad.frag", SHADER, "quad");
+    load(&state.resourceManager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
+    load(&state.resourceManager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text");
+    load(&state.resourceManager, "sandbox/shaders/sprite.vert", "sandbox/shaders/sprite.frag", SHADER, "sprite");
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
-        return -1;
+        return;
     }
 
-    SpriteManager* sprite_m = createSpriteManager(&persistant_storage, r_manager);
-    loadSpritesMapping(sprite_m);
+    state.spriteManager = *createSpriteManager(&state.persistant_storage, &state.resourceManager);
+    loadSpritesMapping(&state.spriteManager);
 
-    //######test world rendering##########
-    //#############################
-    RenderSystem rendersys;
-    initRenderSystem(&rendersys, r_manager);
+    initRenderSystem(&state.renderSystem, &state.resourceManager);
 
-    entity_system_init(&entity_storage);
+    entity_system_init(&state.entity_storage);
+    state.entitiySystem = *get_entity_manager();
+
+    state.inputManager.init();
+
+    state.isRunning = true;
+
+    #ifdef DEBUG_ENABLED
+        state.editor.init_editor(&state.spriteManager);
+    #endif
 
     // Initialize the camera
-    Entity* cam = create_entity("camera");
-    cam->type = CAMERA;
     Camera camera;
-    camera.id = cam->id;
+    camera.type = CAMERA;
     camera.position = glm::vec3(0.0f, 0.0f, 0.0f);
     camera.width = 512.0f;
     camera.height = 288.0f;
     UpdateCamera(camera);
-    
-    Entity* we1 = create_entity("world1", WORLD, &rendersys);
-    we1->type = WORLD;
-    we1->shader_name = "quad";
-    we1->texture_name = "world1";
-    we1->VAO = quadVAO;
-    Entity* we2 = create_entity("world2");
-    we2->type = WORLD;
-    we2->shader_name = "quad";
-    we2->texture_name = "world2";
-    we2->VAO = quadVAO;
+    state.camera = camera;
 
+    state.camptr = &state.camera;
+    
     Entity* text_1_e = create_entity("text1");
     text_1_e->type = TEXT;
     text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
     text_1_e->scale = 1.0;
     text_1_e->position = glm::vec3(0.0f, 20.0f, 1.0f);
+    state.text_1 = text_1_e;
 
     Entity* player = create_entity("player");
     player->type = PLAYER;
     player->scale = 1.0;
-    player->position = glm::vec3(0.0f, 10.0f, 5.0f);
-    player->sprite = sprite_m->getSprite("player");
+    player->position = glm::vec3(0.0f, 10.0f, 3.0f);
+    player->sprite = state.spriteManager.getSprite("player");
     player->active = true;
     player->shader_name = "sprite";
-    player->VAO = quadVAO;
+    player->VAO = state.quadVAO;
+    state.player = player;
 
-    InitWorldQuad(we1);
-    InitWorldQuad(we2);
+}
 
-    inputManager.init();
-
-    bool isRunning = true;
-
-    bool switch_world = false;
-
-    #ifdef DEBUG_ENABLED
-        editor.init_editor();
-    #endif
-    Camera* camptr = &camera;
-
-    while (isRunning) {
-        #ifdef DEBUG_ENABLED
-            
-            //@hotreload shaders
-            reloadChangedShaders(r_manager);
-        #endif
-
-        uint32_t frameStart = SDL_GetTicks();
-        float dt = calculateDeltaTime();
-        inputManager.update(isRunning, &window);
-
-        //###test rendering###########
-
-        glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        Entity *e = (switch_world) ? we1: we2;
+void process_input(float dt) {
+        state.inputManager.update(state.isRunning, &state.window);
 
         #ifdef DEBUG_ENABLED
-            if (inputManager.isKeyPressed(SDLK_TAB)) {
-                if (!editor.active) {
-                    camptr = &editor.camera;
-                    editor.activate_editor();
+            if (state.inputManager.isKeyPressed(SDLK_TAB)) {
+                if (!state.editor.active) {
+                    state.camptr = &state.editor.camera;
+                    state.editor.activate_editor();
                 } else {
                     DEBUG_LOG("editor deactivated");
-                    camptr = &camera;
-                    editor.active = false;
+                    state.camptr = &state.camera;
+                    state.editor.active = false;
                 }
             } 
-            if(editor.active) {
-                editor.update_editor(&inputManager, dt);
-                camptr = &editor.camera;
+            if(state.editor.active) {
+                state.editor.update_editor(&state.inputManager, dt);
+                state.camptr = &state.editor.camera;
             } 
-            if (inputManager.isKeyPressed(SDLK_q)) {
+            if (state.inputManager.isKeyPressed(SDLK_q)) {
                     DEBUG_LOG("game file save fired");
                     save_game_data("D:/Personal/waffle_2/waffle_engine/sandbox/save.adf", get_entity_manager());
                 } 
         #endif
+}
 
-        RenderWorldTexture(r_manager->getResourceByName(e->texture_name)->data.i,
-                           e,
-                           camptr,
-                           r_manager->getResourceByName(e->shader_name)->data.i);
+void update_game() {
+        #ifdef DEBUG_ENABLED
+            //@hotreload shaders
+            reloadChangedShaders(&state.resourceManager);
+        #endif
+        
+        uint32_t frameStart = SDL_GetTicks();
 
-        if (inputManager.isKeyPressed(SDLK_p)) {
-            switch_world = !switch_world;
-
-            std::cout << "P pressed! pauseActive is now " 
-                << (switch_world ? "true" : "false") << std::endl;
-        }
+        glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         {
             //text rendering
-            RenderText_f1(r_manager->getResourceByName("text")->data.i, "Text is rendering", text_1_e, camptr);
+            RenderText_f1(state.resourceManager.getResourceByName("text")->data.i, "this is text", state.text_1, state.camptr);
         }
 
         {
-            renderSprite(r_manager->getResourceByName("sprite")->data.i, player, camptr, &rendersys);
+            renderSprite(state.resourceManager.getResourceByName("sprite")->data.i, state.player, state.camptr, &state.renderSystem);
         }
 
         #ifdef DEBUG_ENABLED
-            if(editor.active) {
-                editor.draw_editor();
+            if(state.editor.active) {
+                state.editor.draw_editor();
             }
         #endif
 
-        window.swapBuffers();
+        state.window.swapBuffers();
 
         // Frame limiting
         uint32_t frameTime = SDL_GetTicks() - frameStart;
         if (frameTime < FRAME_DELAY) {
             SDL_Delay(FRAME_DELAY - frameTime);
         }
-    }
+}
 
-    
+void deinit(){
     #ifdef DEBUG_ENABLED
-        editor.deinit_editor();
+        state.editor.deinit_editor();
     #endif
     FontManager::DestroyInstance();
-    destroyResourceManager(r_manager);
-    window.cleanUp();
+    destroyResourceManager(&state.resourceManager);
+    state.window.cleanUp();
 
-    Temp_Allocator::temp_arena_free_all(&entity_storage);
+    Temp_Allocator::temp_arena_free_all(&state.entity_storage);
+}
+
+int main() {
+    init();
+    
+    while (state.isRunning) {
+        float dt = calculateDeltaTime();
+        process_input(dt);
+        update_game();
+    }
+    
+    deinit();
 
     return 0;
 }

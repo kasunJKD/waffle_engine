@@ -1,9 +1,6 @@
 #include "sprite.h"
 #include "allocator.h"
 #include "debug.h"
-#include "entity.h"
-#include "glm/gtc/type_ptr.hpp"
-#include "glrenderSystem.h"
 
 SpriteManager* createSpriteManager(Pool_Allocator::Pool* pool, ResourceManager* r_manager)
 {
@@ -60,3 +57,21 @@ Sprite* SpriteManager::getSprite(const char* name)
     return v;
 }
 
+std::vector<std::pair<std::string,Sprite*>> SpriteManager::getAllSprites() const {
+    std::vector<std::pair<std::string,Sprite*>> list;
+    list.reserve(count);
+
+    for (size_t i = 0; i < spriteTable->size; ++i) {
+        hitem* entry = spriteTable->items[i];
+        if (!entry) 
+            continue;
+
+        // Only care about Sprite* variants
+        if (std::holds_alternative<Sprite*>(entry->data)) {
+            Sprite* s = std::get<Sprite*>(entry->data);
+            list.emplace_back(entry->key, s);
+        }
+    }
+
+    return list;
+}

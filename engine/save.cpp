@@ -1,7 +1,6 @@
 #include "save.h"
 #include "debug.h"
 #include "resourceManager.h"
-#include "shader.h"
 #include <fstream>
 #include <iostream>
 #include <string>
