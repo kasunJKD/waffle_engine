@@ -36,12 +36,19 @@ active=false
 id=4
 type=6
 name=text1
-position=0.000000,20.000000,0.000000
+position=0.000000,20.000000,1.000000
 scale=1.000000
 color=1.000000,0.000000,0.000000
 active=false
 
 id=5
+name=player
+position=0.000000,10.000000,5.000000
+scale=1.000000
+shader=sprite
+active=true
+
+id=6
 type=4
 name=camera_editor
 position=0.000000,0.000000,0.000000

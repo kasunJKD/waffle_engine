@@ -41,6 +41,8 @@ else()
   endif()
 endif()
 
+add_subdirectory(libc_w)
+
 # ---------------------------------------------------------------------------
 # Engine Static Library
 # ---------------------------------------------------------------------------
@@ -75,6 +77,7 @@ target_include_directories(Engine PUBLIC
   "${CMAKE_SOURCE_DIR}/vendors/imgui"                         # ImGui headers
   "${CMAKE_SOURCE_DIR}/imgui/backends"                # ImGui backend headers
   "${CMAKE_SOURCE_DIR}/vendors/include/assimp"        # Assimp headers
+  "${CMAKE_SOURCE_DIR}/libc_w/include"
 )
 
 # Windows-specific linking for Engine.
@@ -94,6 +97,7 @@ if(WIN32)
     OpenAL32
     assimp-vc143-mt
     freetype
+    libc_w
   )
 endif()
 
