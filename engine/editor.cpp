@@ -1,5 +1,7 @@
 #include "editor.h"
 #include "debug.h"
+#include "engine.h"
+#include "entity.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
 
@@ -15,7 +17,7 @@ void Editor::update_camera(Camera *camera)
     camera->projection = glm::ortho(
         0.0f, camera->width,    // left, right
         camera->height, 0.0f,   // bottom, top  (note the flip if you like Y up vs. Y down)
-        -1.0f, 1.0f
+        -10.0f, 10.0f
     );
 
     camera->view = glm::translate(glm::mat4(1.0f), 
@@ -27,16 +29,15 @@ void Editor::activate_editor() {
     this->active = !this->active;
 }
 
-void Editor::init_editor() {
-    Entity* cam = create_entity("camera_editor");
-    cam->type = CAMERA;
+void Editor::init_editor(SpriteManager *sp_mgr) {
     Camera camera;
-    camera.id = cam->id;
+    camera.type = CAMERA;
     camera.position = glm::vec3(0.0f, 0.0f, 0.0f);
     camera.width = 512.0f;
     camera.height = 288.0f;
 
     this->camera = camera;
+    this->sp_mgr = sp_mgr;
 }
 
 // void Editor::update_editor(InputManager *i) {
@@ -109,7 +110,37 @@ void Editor::update_editor(InputManager* i, float dt) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow(); 
+     // === Sprite Browser Panel ===
+    static Sprite* selectedSprite = nullptr;
+
+    ImGui::Begin("Sprite Browser");
+
+    // Fetch list once per frame
+    auto list = sp_mgr->getAllSprites();  
+
+    // Show sprites in a scrolling area
+    ImGui::BeginChild("##sprite_scroll", ImVec2(0,300), true);
+    for (auto& [name, s] : list) {
+        // compute UV coords in atlas
+        float u0 = (s->pixel_offset.x)                                       / float(s->sheet_size.x);
+        float v0 = (s->pixel_offset.y)                                       / float(s->sheet_size.y);
+        float u1 = (s->pixel_offset.x + s->frame_size.x)                     / float(s->sheet_size.x);
+        float v1 = (s->pixel_offset.y + s->frame_size.y)                     / float(s->sheet_size.y);
+
+        ImGui::PushID(name.c_str());
+        // use a small thumbnail size (e.g. 64×64)
+        if (ImGui::ImageButton("b", (ImTextureID)s->texture_id, ImVec2(64,64),
+                               ImVec2(u0,v0), ImVec2(u1,v1))) {
+            selectedSprite = s;
+        }
+        ImGui::SameLine();
+        ImGui::TextUnformatted(name.c_str());
+        ImGui::PopID();
+    }
+    DEBUG_LOG("TODO sprite editor",selectedSprite);
+    
+    ImGui::EndChild();
+    ImGui::End();
 }
 
 

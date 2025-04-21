@@ -24,8 +24,6 @@ void initRenderSystem(RenderSystem* rs, ResourceManager* rm) {
     FontManager* fontManager = FontManager::GetInstance();
     fontManager->InitTextRendering();
 
-    //init Sprite rendering TODO
-// Init Sprite Rendering Quad
     float quadVertices[] = {
         // positions    // texCoords
         0.0f, 1.0f,     0.0f, 1.0f, // top-left
