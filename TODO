@@ -1,0 +1,20 @@
+------------------------------Inprogress----------------------------------
+TASK_1 -> inprogress
+	1. Perspective debug camera -> done
+	2. 3d lights
+	3. sprites normal mappings tests
+	4. light types
+-------------------------------TODO---------------------------------------
+TASK_2
+	1.Collisions
+
+TASK_3 
+	1.Audio
+
+TASK_4
+	1.debug drag and drop
+	2.debug create entities
+	3.save entities
+	4.load entities
+
+-------------------------------DONE-----------------------------------------

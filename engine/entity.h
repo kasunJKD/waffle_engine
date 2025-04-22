@@ -60,6 +60,11 @@ struct Camera: Entity {
     float zoom;         // Camera zoom level
     float width;        // camera width = 512
     float height;       // camera height = 288
+    glm::vec3 up;
+    glm::vec3 front;
+  float       yaw;
+    float       pitch;
+    float       fov;
 };
 
 #define MAX_RENDER_COMPONENTS 128
@@ -69,7 +74,7 @@ struct RenderSystem {
     int count;
 
     ResourceManager* resManager;
-GLuint spriteVAO;
+    GLuint spriteVAO;
     GLuint spriteVBO;
     GLuint spriteEBO;
 };

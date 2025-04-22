@@ -238,6 +238,7 @@ void renderSprite(GLuint shader, Entity* e, Camera* camera, RenderSystem* rs) {
 
     glm::mat4 model = glm::translate(glm::mat4(1.0f), e->position);
     model = glm::scale(model, glm::vec3(e->sprite->frame_size * e->scale, 1.0f));
+
     glUniformMatrix4fv(glGetUniformLocation(shader, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 
     glActiveTexture(GL_TEXTURE0);

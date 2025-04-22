@@ -18,6 +18,8 @@
 #define GAME_HEIGTH 288
 #define WORLD_WIDTH 3072
 #define WORLD_HEIGHT 1728
+const glm::vec2 gameBounds  = glm::vec2(GAME_WIDTH, GAME_HEIGTH);
+const glm::vec2 worldBounds = glm::vec2(WORLD_WIDTH, WORLD_HEIGHT);
 
 #define ENTITY_ARENA_SIZE    2* (1024 * 1024)
 
@@ -31,18 +33,6 @@ float calculateDeltaTime() {
     float deltaTime = (currentTicks - lastTicks) / 1000.0f;
     lastTicks = currentTicks;
     return deltaTime;
-}
-
-void UpdateCamera(Camera &camera)
-{
-    camera.projection = glm::ortho(
-        0.0f, camera.width,    // left, right
-        camera.height, 0.0f,   // bottom, top  (note the flip if you like Y up vs. Y down)
-        -10.0f, 10.0f
-    );
-
-    camera.view = glm::translate(glm::mat4(1.0f), 
-                                 glm::vec3(-camera.position.x, -camera.position.y, camera.position.z));
 }
 
 struct State {
@@ -59,6 +49,8 @@ struct State {
 
     #ifdef DEBUG_ENABLED
         Editor editor;
+        GLuint debugVAO = 0, debugVBO = 0;
+        GLuint debugShader = 0;
     #endif
 
     Camera* camptr;
@@ -69,6 +61,70 @@ struct State {
     Entity* player;
     Entity* text_1;
 };
+
+void UpdateCamera(Camera &camera)
+{
+    float aspect   = camera.width / camera.height; // e.g. 512/288
+    float halfH    = camera.height * 0.5f;        // 144 units
+    float fovyDeg  = 60.0f;                       // pick a vertical FOV you like
+    float fovy     = glm::radians(fovyDeg);
+
+    float distance = halfH / tan(fovy * 0.5f);
+
+    // 3) Set your camera position.z to that distance:
+    camera.position.z = distance;
+
+    // 4) Build the projection (and flip Y if that’s your convention):
+    camera.projection = glm::perspective(fovy, aspect, 0.1f, distance + 1000.0f);
+    camera.projection[1][1] *= -1.0f;
+
+    // 5) Look from (x,y,z) toward the plane z=0:
+    camera.view = glm::lookAt(
+        glm::vec3(camera.position.x, camera.position.y, camera.position.z),
+        glm::vec3(camera.position.x, camera.position.y, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+}
+
+void drawRect(State &S, const glm::vec2 &size, const glm::vec3 &color) {
+    // upload shader + camera
+    glUseProgram(S.debugShader);
+    glUniformMatrix4fv(
+      glGetUniformLocation(S.debugShader, "u_Proj"),
+      1, GL_FALSE,
+      glm::value_ptr(S.camptr->projection)
+    );
+    glUniformMatrix4fv(
+      glGetUniformLocation(S.debugShader, "u_View"),
+      1, GL_FALSE,
+      glm::value_ptr(S.camptr->view)
+    );
+    glUniform3fv(
+      glGetUniformLocation(S.debugShader, "u_Color"),
+      1,
+      glm::value_ptr(color)
+    );
+
+    // build a closed‐loop rectangle from (0,0) to (size.x,size.y)
+    float verts[10] = {
+      0.0f,        0.0f,
+      size.x,      0.0f,
+      size.x,      size.y,
+      0.0f,        size.y,
+      0.0f,        0.0f
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, S.debugVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+
+    glBindVertexArray(S.debugVAO);
+      glDrawArrays(GL_LINE_STRIP, 0, 5);
+    glBindVertexArray(0);
+
+    glUseProgram(0);
+}
+
+
 
 static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
 State state = {};
@@ -94,6 +150,11 @@ void init() {
     load(&state.resourceManager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
     load(&state.resourceManager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text");
     load(&state.resourceManager, "sandbox/shaders/sprite.vert", "sandbox/shaders/sprite.frag", SHADER, "sprite");
+    load(&state.resourceManager,
+     "sandbox/shaders/debug.vert",
+     "sandbox/shaders/debug.frag",
+     SHADER,
+     "debug");
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
@@ -114,14 +175,33 @@ void init() {
 
     #ifdef DEBUG_ENABLED
         state.editor.init_editor(&state.spriteManager);
+        state.debugShader = state.resourceManager
+                               .getResourceByName("debug")
+                               ->data.i;
+
+        // create a dynamic VBO for up to 5 points (a closed rectangle):
+        glGenVertexArrays(1, &state.debugVAO);
+        glGenBuffers(1, &state.debugVBO);
+
+        glBindVertexArray(state.debugVAO);
+          glBindBuffer(GL_ARRAY_BUFFER, state.debugVBO);
+          glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*5, nullptr, GL_DYNAMIC_DRAW);
+          // aPos = vec2
+          glEnableVertexAttribArray(0);
+          glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+        glBindVertexArray(0);
     #endif
 
     // Initialize the camera
     Camera camera;
     camera.type = CAMERA;
-    camera.position = glm::vec3(0.0f, 0.0f, 0.0f);
+    camera.width  = float(GAME_WIDTH);
+    camera.height = float(GAME_HEIGTH);
+    camera.position.x = GAME_WIDTH  * 0.5f;
+    camera.position.y = GAME_HEIGTH * 0.5f;
     camera.width = 512.0f;
     camera.height = 288.0f;
+
     UpdateCamera(camera);
     state.camera = camera;
 
@@ -179,7 +259,7 @@ void update_game() {
         
         uint32_t frameStart = SDL_GetTicks();
 
-        glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         {
@@ -195,6 +275,11 @@ void update_game() {
             if(state.editor.active) {
                 state.editor.draw_editor();
             }
+            // draw the world bounds in green:
+            drawRect(state, worldBounds, glm::vec3(0.0f, 1.0f, 0.0f));
+
+            // draw the game‐viewport bounds in red:
+            drawRect(state, gameBounds,  glm::vec3(1.0f, 0.0f, 0.0f));
         #endif
 
         state.window.swapBuffers();

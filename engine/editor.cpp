@@ -11,17 +11,32 @@
 #include "backends/imgui_impl_opengl3.h"
 #endif
 
-void Editor::update_camera(Camera *camera)
+void Editor::update_camera(Camera *cam)
 {
-    
-    camera->projection = glm::ortho(
-        0.0f, camera->width,    // left, right
-        camera->height, 0.0f,   // bottom, top  (note the flip if you like Y up vs. Y down)
-        -10.0f, 10.0f
+  float aspect = cam->width / cam->height;
+    cam->projection = glm::perspective(
+        glm::radians(cam->fov),  // vertical FOV from camera
+        aspect,
+        0.1f,                    // near
+        1000.0f                  // far
+    );
+    // preserve your “Y down” convention if desired:
+    cam->projection[1][1] *= -1.0f;
+
+    // 2) Recompute front vector from yaw/pitch
+    glm::vec3 f;
+    f.x = cos(glm::radians(cam->yaw)) * cos(glm::radians(cam->pitch));
+    f.y = sin(glm::radians(cam->pitch));
+    f.z = sin(glm::radians(cam->yaw)) * cos(glm::radians(cam->pitch));
+    cam->front = glm::normalize(f);
+
+    // 3) View matrix: look from position toward position+front
+    cam->view = glm::lookAt(
+        cam->position,
+        cam->position + cam->front,
+        cam->up
     );
 
-    camera->view = glm::translate(glm::mat4(1.0f), 
-                                 glm::vec3(-camera->position.x, -camera->position.y, camera->position.z));
 }
 
 void Editor::activate_editor() {
@@ -33,85 +48,100 @@ void Editor::init_editor(SpriteManager *sp_mgr) {
     Camera camera;
     camera.type = CAMERA;
     camera.position = glm::vec3(0.0f, 0.0f, 0.0f);
+    camera.position.x = 512  * 0.5f;
+    camera.position.y = 288 * 0.5f;
     camera.width = 512.0f;
     camera.height = 288.0f;
-
+    camera.front   = glm::vec3(0.0f, 0.0f, -1.0f);
+    camera.up = glm::vec3(0.0f, 1.0f,  0.0f);
+    camera.yaw     = -90.0f;
+    camera.pitch   =   0.0f;
+    camera.fov     =  60.0f;
+    
     this->camera = camera;
     this->sp_mgr = sp_mgr;
+
+
 }
 
-// void Editor::update_editor(InputManager *i) {
-//     if(i->isMouseButtonScrollFlip((Uint8)SDL_MOUSEWHEEL)) {
-//         int scrollY = i->getMouseWheelY();
-//
-//         if (scrollY != 0) {
-//             this->camera.position.z -= scrollY * 0.1f;  // scroll up -> zoom in, scroll down -> zoom out
-//             DEBUG_LOG("editor z pos %f\n", this->camera.position.z);
-//         }
-//     }
-//
-// }
 void Editor::update_editor(InputManager* i, float dt) {
-    float zoomSpeed = 50.0f;
-    int scrollY = i->getMouseWheelY();
-    float moveSpeed = 100.0f;
+    // ─── tunables ─────────────────────────────────────────
+    const float edgePanSpeed   = 200.0f;      // units/sec near screen edge
+    const float dragPanSpeed   = 0.5f;        // world‐units per pixel drag
+    const float zoomFactor     = 1.1f;        // 10% zoom per wheel notch
+    const float edgeZonePx     = 20.0f;       // px inside window to start edge‐pan
 
-    if(i->isMouseButtonScrollFlip((Uint8)SDL_MOUSEWHEEL)) {
-        if (scrollY != 0) {
-            // Zoom in (scroll up): reduce width/height
-            // Zoom out (scroll down): increase width/height
-            camera.width += scrollY * zoomSpeed;
-            camera.height += scrollY * (zoomSpeed * (camera.height / camera.width));
+    // ─── 0) Mouse‑delta / first‑mouse init ────────────────
+    static bool firstMouse = true;
+    static int  lastX = 0, lastY = 0;
+    int mx = i->getMouseX();
+    int my = i->getMouseY();
+    if (firstMouse) {
+        lastX = mx;
+        lastY = my;
+        firstMouse = false;
+    }
+    int dx = mx - lastX;
+    int dy = lastY - my;  // invert: moving up → positive
 
-            // Optional: clamp zoom
-            camera.width = std::max(64.0f, std::min(3072.0f, camera.width));
-            camera.height = std::max(36.0f, std::min(1728.0f, camera.height));
+    // ─── 1) LOOK‑AROUND (LMB) ──────────────────────────────
+    if (i->isMouseButtonHeld(SDL_BUTTON_LEFT)) {
+        camera.yaw   += dx * mouseSensitivity;
+        camera.pitch += dy * mouseSensitivity;
+        camera.pitch  = glm::clamp(camera.pitch, -89.0f, 89.0f);
 
-            update_camera(&camera);
-
-            //DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
-        }
+        // rebuild front vector immediately
+        glm::vec3 f;
+        f.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+        f.y = sin(glm::radians(camera.pitch));
+        f.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+        camera.front = glm::normalize(f);
     }
 
-    else if(i->isMouseWheelScroll((Uint8)SDL_MOUSEWHEEL)) {
-        if (scrollY != 0) {
-            // Zoom in (scroll up): reduce width/height
-            // Zoom out (scroll down): increase width/height
-            camera.width -= scrollY * zoomSpeed;
-            camera.height -= scrollY * (zoomSpeed * (camera.height / camera.width));
+    // ─── 2) WASD “fly” movement ──────────────────────────────
+    float velocity = movementSpeed * dt;  // movementSpeed = your units/sec
+    glm::vec3 forward = camera.front;
+    glm::vec3 right   = glm::normalize(glm::cross(forward, camera.up));
 
-            // Optional: clamp zoom
-            camera.width = std::max(64.0f, std::min(3072.0f, camera.width));
-            camera.height = std::max(36.0f, std::min(1728.0f, camera.height));
+    if (i->isKeyHeld(SDLK_w)) camera.position += forward * velocity;
+    if (i->isKeyHeld(SDLK_s)) camera.position -= forward * velocity;
+    if (i->isKeyHeld(SDLK_a)) camera.position -= right   * velocity;
+    if (i->isKeyHeld(SDLK_d)) camera.position += right   * velocity;
 
-            update_camera(&camera);
-
-            //DEBUG_LOG("Zoom: width=%.2f, height=%.2f\n", camera.width, camera.height);
-        }
+    // ─── 3) ZOOM (wheel) ────────────────────────────────────
+    int wheelY = i->getMouseWheelY();
+    if (wheelY != 0) {
+        float factor      = std::pow(zoomFactor, wheelY);
+        camera.width    /= factor;
+        camera.height   /= factor;
+        camera.width     = glm::clamp(camera.width,  64.0f, 3072.0f);
+        camera.height    = glm::clamp(camera.height, 36.0f, 1728.0f);
     }
 
-    if(i->isKeyPressed(SDLK_d) || i->isKeyHeld(SDLK_d)) {
-        camera.position.x += moveSpeed * dt;
-    }
-    if(i->isKeyPressed(SDLK_a) || i->isKeyHeld(SDLK_a)) {
-        camera.position.x -= moveSpeed * dt;
-    }
-    if(i->isKeyPressed(SDLK_w) || i->isKeyHeld(SDLK_w)) {
-        camera.position.y -= moveSpeed * dt;
-    }
-    if(i->isKeyPressed(SDLK_s) || i->isKeyHeld(SDLK_s)) {
-        camera.position.y += moveSpeed * dt;
+    // ─── 4) EDGE‑PAN (mouse at screen border) ───────────────
+    if (mx <  edgeZonePx)                     camera.position.x -= edgePanSpeed * dt;
+    else if (mx > 960  - edgeZonePx) camera.position.x += edgePanSpeed * dt;
+    if (my <  edgeZonePx)                     camera.position.y -= edgePanSpeed * dt;
+    else if (my > 540 - edgeZonePx) camera.position.y += edgePanSpeed * dt;
+
+    // ─── 5) DRAG‑PAN (MMB or RMB) ──────────────────────────
+    if (i->isMouseButtonHeld(SDL_BUTTON_MIDDLE) ||
+        i->isMouseButtonHeld(SDL_BUTTON_RIGHT)) {
+        camera.position.x -= dx * dragPanSpeed;
+        camera.position.y += dy * dragPanSpeed;
     }
 
+    // ─── 6) Commit last mouse for next frame ───────────────
+    lastX = mx;
+    lastY = my;
     update_camera(&camera);
-
 
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
      // === Sprite Browser Panel ===
-    static Sprite* selectedSprite = nullptr;
+    //static Sprite* selectedSprite = nullptr;
 
     ImGui::Begin("Sprite Browser");
 
@@ -131,13 +161,12 @@ void Editor::update_editor(InputManager* i, float dt) {
         // use a small thumbnail size (e.g. 64×64)
         if (ImGui::ImageButton("b", (ImTextureID)s->texture_id, ImVec2(64,64),
                                ImVec2(u0,v0), ImVec2(u1,v1))) {
-            selectedSprite = s;
+            //selectedSprite = s;
         }
         ImGui::SameLine();
         ImGui::TextUnformatted(name.c_str());
         ImGui::PopID();
     }
-    DEBUG_LOG("TODO sprite editor",selectedSprite);
     
     ImGui::EndChild();
     ImGui::End();
