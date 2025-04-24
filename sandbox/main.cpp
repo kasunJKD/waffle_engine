@@ -10,6 +10,7 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
+#include "glrenderSystem.h"
 #include "save.h"
 
 #define SCREENSIZE_WIDTH 960
@@ -60,6 +61,8 @@ struct State {
 
     Entity* player;
     Entity* text_1;
+    Entity* light;
+    Entity* testquad;
 };
 
 void UpdateCamera(Camera &camera)
@@ -224,6 +227,31 @@ void init() {
     player->VAO = state.quadVAO;
     state.player = player;
 
+    Entity* light_ = create_entity("light");
+    light_->type = LIGHT;
+    light_->scale = 10.0;
+    light_->position = glm::vec3(100.0f, 10.0f, 10.0f);
+    light_->active = true;
+    light_->color = glm::vec3(1.0f, 1.0f, 1.0f);
+    light_->VAO = state.quadVAO;
+    light_->VBO = state.quadVBO;
+    light_->shader_name = "quad";
+    state.light = light_;
+
+    Entity* quad_ = create_entity("quad");
+    quad_->type = QUAD;
+    quad_->scale = 100.0;
+    quad_->position = glm::vec3(100.0f, 10.0f, 1.0f);
+    quad_->active = true;
+    quad_->color = glm::vec3(1.0f, 0.5f, 0.31f);
+    quad_->VAO = state.quadVAO;
+    quad_->VBO = state.quadVBO;
+    quad_->shader_name = "quad";
+    state.testquad = quad_;
+
+    initTestQuad(light_);
+    initTestQuad(quad_);
+
 }
 
 void process_input(float dt) {
@@ -269,6 +297,12 @@ void update_game() {
 
         {
             renderSprite(state.resourceManager.getResourceByName("sprite")->data.i, state.player, state.camptr, &state.renderSystem);
+        }
+        
+        {
+            //test lights
+            renderTestQuad(state.testquad, state.camptr, state.resourceManager.getResourceByName("quad")->data.i);
+            renderLightQuad(state.light, state.camptr, state.resourceManager.getResourceByName("quad")->data.i);
         }
 
         #ifdef DEBUG_ENABLED

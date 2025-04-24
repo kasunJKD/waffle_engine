@@ -13,6 +13,83 @@ void CheckGLError(const std::string& message) {
     }
 }
 
+void initTestQuad(Entity* en) {
+    float quadVertices[] = {
+        // positions    // texCoords (not used in current shader, but kept for future use)
+        0.0f, 1.0f,     0.0f, 1.0f, // top-left
+        1.0f, 1.0f,     1.0f, 1.0f, // top-right
+        1.0f, 0.0f,     1.0f, 0.0f, // bottom-right
+        0.0f, 0.0f,     0.0f, 0.0f  // bottom-left
+    };
+
+    GLuint quadIndices[] = {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    glGenVertexArrays(1, &en->VAO);
+    glGenBuffers(1, &en->VBO);
+    glGenBuffers(1, &en->EBO);
+
+    glBindVertexArray(en->VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, en->VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, en->EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+
+    // Vertex positions
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+}
+
+void renderTestQuad(Entity *e, Camera *r, GLuint shader) {
+    glUseProgram(shader);
+    CheckGLError("gluseprogram");
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(e->position));
+    model = glm::scale(model, glm::vec3(e->scale, e->scale, 1.0f));
+
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(r->projection));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(r->view));
+glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+    // Set colors (hardcoded or dynamic)
+    glUniform3f(glGetUniformLocation(shader, "objectColor"), e->color.r, e->color.g, e->color.b);
+    glUniform3f(glGetUniformLocation(shader, "lightColor"), 1.0f, 1.0f, 1.0f);
+
+    glUniform1i(glGetUniformLocation(shader, "isLight"), 0);
+
+    glBindVertexArray(e->VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // Use EBO
+    glBindVertexArray(0);
+}
+
+
+void renderLightQuad(Entity *e, Camera *r, GLuint shader) {
+    glUseProgram(shader);
+    CheckGLError("gluseprogram");
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(e->position));
+    model = glm::scale(model, glm::vec3(e->scale, e->scale, 1.0f));
+    
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(r->projection));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(r->view));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+    // Set colors (hardcoded or dynamic)
+    glUniform1i(glGetUniformLocation(shader, "isLight"), 1);
+
+    glBindVertexArray(e->VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // Use EBO
+    glBindVertexArray(0);
+}
+
 void initRenderSystem(RenderSystem* rs, ResourceManager* rm) {
     rs->count = 0;
     rs->resManager = rm;

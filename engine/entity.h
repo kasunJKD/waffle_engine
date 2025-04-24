@@ -20,7 +20,9 @@ enum EntityType {
     WORLD,
     CAMERA,
     MONSTER,
-    TEXT
+    TEXT,
+    LIGHT,
+    QUAD,
 };
 
 enum WorldType {
@@ -43,12 +45,14 @@ struct Entity {
     //fontmanger manages font renders no need these
     const char* texture_name;
     const char* shader_name;
-    GLuint VAO;
+    GLuint VAO, VBO, EBO;
 
     entityId parent_id;
     std::vector<Entity*> children;
 
     Sprite *sprite;
+
+    //light based data
 
     bool active;
 };

@@ -20,4 +20,10 @@ void RenderText_f1(GLuint shader, std::string text, Entity *e, Camera *r);
 
 void renderSprite(GLuint shader, Entity* e, Camera* camera, RenderSystem* rs);
 
+void initTestQuad(Entity* en);
+
+void renderTestQuad(Entity *e, Camera *r, GLuint shader);
+
+void renderLightQuad(Entity *e, Camera *r, GLuint shader);
+
 #endif //GLRENDERSYSTEM_H
