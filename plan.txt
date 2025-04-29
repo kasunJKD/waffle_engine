@@ -71,6 +71,6 @@ editor -> perspective cam
 game -> ortho camera
 make the camera/cameras independent (not entities)
 
-
+add a entity manager -> which has all the entities example -> rendables , cameras , etc 
 
 

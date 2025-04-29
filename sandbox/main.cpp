@@ -230,7 +230,7 @@ void init() {
     Entity* light_ = create_entity("light");
     light_->type = LIGHT;
     light_->scale = 10.0;
-    light_->position = glm::vec3(100.0f, 10.0f, 10.0f);
+    light_->position = glm::vec3(150.0f, 50.0f, 100.0f);
     light_->active = true;
     light_->color = glm::vec3(1.0f, 1.0f, 1.0f);
     light_->VAO = state.quadVAO;
@@ -240,7 +240,7 @@ void init() {
 
     Entity* quad_ = create_entity("quad");
     quad_->type = QUAD;
-    quad_->scale = 100.0;
+    quad_->scale = 200.0;
     quad_->position = glm::vec3(100.0f, 10.0f, 1.0f);
     quad_->active = true;
     quad_->color = glm::vec3(1.0f, 0.5f, 0.31f);
@@ -301,7 +301,7 @@ void update_game() {
         
         {
             //test lights
-            renderTestQuad(state.testquad, state.camptr, state.resourceManager.getResourceByName("quad")->data.i);
+            renderTestQuad(state.testquad, state.camptr, state.resourceManager.getResourceByName("quad")->data.i, state.light);
             renderLightQuad(state.light, state.camptr, state.resourceManager.getResourceByName("quad")->data.i);
         }
 
