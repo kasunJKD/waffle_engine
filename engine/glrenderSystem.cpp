@@ -55,20 +55,25 @@ void renderTestQuad(Entity *e, Camera *r, GLuint shader, Entity *light) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(e->position));
     model = glm::scale(model, glm::vec3(e->scale, e->scale, 1.0f));
-// If your lighting is in world space:
-glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(model)));
+    // If your lighting is in world space:
+    glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(model)));
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(r->projection));
     glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(r->view));
-glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, glm::value_ptr(model));
-glUniformMatrix3fv(glGetUniformLocation(shader, "mNormal"), 1, GL_FALSE, glm::value_ptr(normalMat));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix3fv(glGetUniformLocation(shader, "mNormal"), 1, GL_FALSE, glm::value_ptr(normalMat));
 
     // Set colors (hardcoded or dynamic)
-    glUniform3f(glGetUniformLocation(shader, "objectColor"), e->color.r, e->color.g, e->color.b);
-    glUniform3f(glGetUniformLocation(shader, "lightColor"), 1.0f, 1.0f, 1.0f);
-
     glUniform1i(glGetUniformLocation(shader, "isLight"), 0);
-    glUniform3f(glGetUniformLocation(shader, "lightPos"), light->position.x, light->position.y, light->position.z);
     glUniform3f(glGetUniformLocation(shader, "viewPos"), r->position.x, r->position.y, r->position.z);
+    glUniform3f(glGetUniformLocation(shader, "material.ambient"), e->ambient.x, e->ambient.y, e->ambient.z);
+    glUniform3f(glGetUniformLocation(shader, "material.diffuse"), e->diffuse.x, e->diffuse.y, e->diffuse.z);
+    glUniform3f(glGetUniformLocation(shader, "material.specular"), e->specular.x, e->specular.y, e->specular.z);
+    glUniform1f(glGetUniformLocation(shader, "material.shine"), e->shine);
+
+    glUniform3f(glGetUniformLocation(shader, "light.ambient"), light->ambient.x, light->ambient.y, light->ambient.z);
+    glUniform3f(glGetUniformLocation(shader, "light.diffuse"), light->diffuse.x, light->diffuse.y, light->diffuse.z);
+    glUniform3f(glGetUniformLocation(shader, "light.specular"), light->specular.x, light->specular.y, light->specular.z);
+    glUniform3f(glGetUniformLocation(shader, "light.position"), light->position.x, light->position.y, light->position.z);
 
 
     glBindVertexArray(e->VAO);

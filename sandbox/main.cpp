@@ -236,6 +236,9 @@ void init() {
     light_->VAO = state.quadVAO;
     light_->VBO = state.quadVBO;
     light_->shader_name = "quad";
+    light_ -> ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+    light_ -> diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+    light_ -> specular = glm::vec3(1.0f, 1.0f, 1.0f);
     state.light = light_;
 
     Entity* quad_ = create_entity("quad");
@@ -247,6 +250,10 @@ void init() {
     quad_->VAO = state.quadVAO;
     quad_->VBO = state.quadVBO;
     quad_->shader_name = "quad";
+    quad_ -> ambient = glm::vec3(1.0f, 0.5f, 0.31f);
+    quad_ -> specular= glm::vec3(0.5f, 0.5f, 0.5f);
+    quad_ -> diffuse = glm::vec3(1.0f, 0.5f, 0.31f);
+    quad_ -> shine = 32.0;
     state.testquad = quad_;
 
     initTestQuad(light_);
