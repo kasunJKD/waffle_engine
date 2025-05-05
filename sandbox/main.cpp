@@ -1,16 +1,24 @@
 #include "allocator.h"
 #include "debug.h"
+#include "defines.h"
 #include "editor.h"
 #include "engine.h" // IWYU pragma: keep
 #include "entity.h"
 #include "glad/glad.h"
+#include <cstdint>
+#include <cstdio>
+#include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // For glm::translate
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
+#include "glrenderSystem.h"
 #include "save.h"
+
+#include "stb_image.h"
 
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
@@ -44,6 +52,48 @@ void UpdateCamera(Camera &camera)
     camera.view = glm::translate(glm::mat4(1.0f), 
                                  glm::vec3(-camera.position.x, -camera.position.y, camera.position.z));
 }
+struct State;
+// --------------------------------------------------
+// A minimal Scene type
+// --------------------------------------------------
+struct Scene {
+    std::string name;
+    std::vector<entityId> entities;
+    bool           active = false;
+  
+    // build all the entities for this scene (called once)
+    std::function<void(State&)>  init;
+    // clean up if you want to destroy entities when you leave
+    std::function<void(State&)>  teardown;
+};
+
+// --------------------------------------------------
+// SceneManager lives in your State
+// --------------------------------------------------
+struct SceneManager {
+    std::unordered_map<std::string, Scene> scenes;
+    Scene* current = nullptr;
+
+    void addScene(Scene&& s) {
+        scenes.emplace(s.name, std::move(s));
+    }
+
+    void switchTo(State& S, const std::string& name) {
+        // teardown current
+        if (current && current->active) {
+            if (current->teardown) current->teardown(S);
+            current->active = false;
+        }
+        // init new
+        auto it = scenes.find(name);
+        assert(it != scenes.end());
+        current = &it->second;
+        if (!current->active) {
+            if (current->init) current->init(S);
+            current->active = true;
+        }
+    }
+};
 
 struct State {
     Window window;
@@ -51,7 +101,8 @@ struct State {
     ResourceManager resourceManager;
     SpriteManager spriteManager;
     RenderSystem renderSystem;
-    EntitySystem entitiySystem;
+    EntitySystem* entitiySystem;
+    SceneManager scenemgr;
     
     GLuint quadVAO, quadVBO;
     Pool_Allocator::Pool persistant_storage; //for resources
@@ -63,12 +114,62 @@ struct State {
 
     Camera* camptr;
     Camera camera;
-
-    bool isRunning;
-
     Entity* player;
     Entity* text_1;
+
+    bool isRunning;
 };
+
+void loadFromBluePrint(State &state, const char* filename, int tileW, int tileH, const std::unordered_map<uint32_t, const char*>& colorToSpriteNameMap, std::string sceneName) {
+    int w, h, channels;
+    unsigned char* data = stbi_load(filename, &w, &h, &channels, 4);
+    DEBUG_ASSERT(data, "loadFromBlueprint stbi load error");
+
+    int row = h / tileH;
+    int cols = w / tileW;
+
+    for (int y = 0; y < row; y++) {
+        for (int x = 0; x < cols; x++) {
+            int px = x * tileW + (tileW / 2);
+            int py = y * tileH + (tileH / 2);
+
+            unsigned char* pixelOffset = data + ((py * w) + px) * 4;
+            unsigned char r = pixelOffset[0];
+            unsigned char g = pixelOffset[1];
+            unsigned char b = pixelOffset[2];
+            unsigned char a = pixelOffset[3];
+
+            uint32_t hex =
+                (uint32_t(r) << 24) |
+                (uint32_t(g) << 16) |
+                (uint32_t(b) <<  8) |
+                (uint32_t(a) <<  0);
+
+            auto it = colorToSpriteNameMap.find(hex);
+if (it != colorToSpriteNameMap.end()) {
+    printf(
+      "  [blueprint] Hit color 0x%08X at tile (%d,%d) → sprite '%s'\n",
+      hex, x, y, it->second
+    );
+}
+            if (it == colorToSpriteNameMap.end()) continue;
+
+            const char* spriteName = it->second;
+
+    //player->sprite = state.spriteManager.getSprite("player");
+            Sprite* sprite = state.spriteManager.getSprite(spriteName);
+            Entity* e = create_entity(spriteName);
+            e->sprite = sprite;
+            e->position = glm::vec3(x*tileW, y*tileH, 0.0f);
+            e->scale    = 1.0f;
+
+            state.scenemgr.scenes[sceneName].entities.push_back(e->id);
+
+        }
+    }
+    stbi_image_free(data);
+}
+
 
 static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
 State state = {};
@@ -106,7 +207,7 @@ void init() {
     initRenderSystem(&state.renderSystem, &state.resourceManager);
 
     entity_system_init(&state.entity_storage);
-    state.entitiySystem = *get_entity_manager();
+    state.entitiySystem = get_entity_manager();
 
     state.inputManager.init();
 
@@ -131,7 +232,7 @@ void init() {
     text_1_e->type = TEXT;
     text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
     text_1_e->scale = 1.0;
-    text_1_e->position = glm::vec3(0.0f, 20.0f, 1.0f);
+    text_1_e->position = glm::vec3(0.0f, 20.0f, 0.0f);
     state.text_1 = text_1_e;
 
     Entity* player = create_entity("player");
@@ -143,6 +244,71 @@ void init() {
     player->shader_name = "sprite";
     player->VAO = state.quadVAO;
     state.player = player;
+
+    // state.scenemgr.addScene(Scene{
+    //     .name = "OverWorld",
+    //     .entities = std::vector<entityId>(),
+    //     .active = true,
+    //     .init = [](State &s) {
+    //         static std::unordered_map<uint32_t, const char*> colorToSprite = {
+    //             { 0x00FF16FF, "grass"  },  // pure green → tree
+    //         };
+    //         loadFromBluePrint(s, 
+    //                           "assets/test_game/testWorld1.png",
+    //                           32, 32,
+    //                           colorToSprite,
+    //                           "OverWorld" );
+    //     },
+    //     .teardown = {}
+    // });
+state.scenemgr.addScene(Scene{
+    // [0] name
+    "OverWorld",
+    // [1] entities — default‐constructed to empty
+    {},
+    // [2] active    — default‐constructed to false
+    false,
+    // [3] init
+    [](State &s) {
+        static std::unordered_map<uint32_t, const char*> colorToSprite = {
+            { 0x00FF16FF, "grass" },  // pure green → grass
+        };
+        loadFromBluePrint(
+            s,
+            "assets/test_game/testWorld1.png",
+            32, 32,
+            colorToSprite,
+            "OverWorld"
+        );
+    },
+    // [4] teardown
+    [](State &s) {
+        // remove all spawned entities:
+        auto &ents = s.scenemgr.scenes["OverWorld"].entities;
+        for (auto id : ents) remove_entity(id);
+        ents.clear();
+    }
+});
+
+    state.scenemgr.switchTo(state, "OverWorld");
+    printf("%s\n", state.scenemgr.current->name.c_str());
+printf("=== Entity Dump (count = %zu) ===\n", state.entitiySystem->entity_count);
+    for (size_t i = 0; i < state.entitiySystem->entity_count; ++i) {
+        const Entity& e = state.entitiySystem->entities[i];
+        printf(
+            "Entity[%2zu] id=%3u, name=\"%s\", type=%d, world=%d, active=%s\n"
+            "          pos=(%.1f, %.1f, %.1f), scale=%.1f\"\n",
+            i,
+            e.id,
+            e.name ? e.name : "(null)",
+            e.type,
+            e.worldType,
+            e.active ? "yes" : "no",
+            e.position.x, e.position.y, e.position.z,
+            e.scale
+        );
+    }
+    printf("===============================\n");
 
 }
 
@@ -181,6 +347,19 @@ void update_game() {
 
         glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        {
+            for (auto id : state.scenemgr.current->entities) {
+                auto& ent = state.entitiySystem->entities[id];
+                if (!ent.sprite) continue;          // sanity check
+                renderSprite(
+                    state.resourceManager.getResourceByName("sprite")->data.i,
+                    &ent,
+                    state.camptr,
+                    &state.renderSystem
+                );
+            }
+        }
 
         {
             //text rendering
