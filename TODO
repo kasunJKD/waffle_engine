@@ -4,6 +4,7 @@ TASK_1 -> inprogress
 	2. 3d lights
 	3. sprites normal mappings tests
 	4. light types
+	5. in the state set the entity system as a pointer -> which will get the data from singleton
 -------------------------------TODO---------------------------------------
 TASK_2
 	1.Collisions
@@ -20,5 +21,6 @@ TASK_4
 
 FLOATING
 	1.Entity Manager 
+	2.Scene Manager
 
 -------------------------------DONE-----------------------------------------
