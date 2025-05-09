@@ -51,6 +51,11 @@ struct Entity {
     Sprite *sprite;
 
     bool active;
+
+    //collisions
+ glm::vec2 halfSize;       // half‐width/height of the box
+  glm::vec2 colliderOffset; // offset from sprite top‐left to box top‐left
+  bool      collidable;
 };
 
 

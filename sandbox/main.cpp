@@ -110,6 +110,8 @@ struct State {
 
     #ifdef DEBUG_ENABLED
         Editor editor;
+        GLuint debugVAO, debugVBO;
+        GLint  lineShader, uMVPLoc, uColorLoc;
     #endif
 
     Camera* camptr;
@@ -130,8 +132,8 @@ void loadFromBluePrint(State &state, const char* filename, int tileW, int tileH,
 
     for (int y = 0; y < row; y++) {
         for (int x = 0; x < cols; x++) {
-            int px = x * tileW + (tileW / 2);
-            int py = y * tileH + (tileH / 2);
+            int px = (x * tileW) + (tileW / 2);
+            int py = (y * tileH) + (tileH / 2);
 
             unsigned char* pixelOffset = data + ((py * w) + px) * 4;
             unsigned char r = pixelOffset[0];
@@ -146,12 +148,12 @@ void loadFromBluePrint(State &state, const char* filename, int tileW, int tileH,
                 (uint32_t(a) <<  0);
 
             auto it = colorToSpriteNameMap.find(hex);
-if (it != colorToSpriteNameMap.end()) {
-    printf(
-      "  [blueprint] Hit color 0x%08X at tile (%d,%d) → sprite '%s'\n",
-      hex, x, y, it->second
-    );
-}
+            if (it != colorToSpriteNameMap.end()) {
+                printf(
+                  "  [blueprint] Hit color 0x%08X at tile (%d,%d) → sprite '%s'\n",
+                  hex, x, y, it->second
+                );
+            }
             if (it == colorToSpriteNameMap.end()) continue;
 
             const char* spriteName = it->second;
@@ -163,6 +165,17 @@ if (it != colorToSpriteNameMap.end()) {
             e->position = glm::vec3(x*tileW, y*tileH, 0.0f);
             e->scale    = 1.0f;
 
+            // AABB half‐extents:
+            e->halfSize = { 16 , 16};
+             e->colliderOffset = { 0.0f,  0.0f };
+            // Mark it collidable if you want physics on it:
+            e->collidable = false;
+            if (std::strcmp(spriteName, "water") == 0) {
+             e->collidable = true;
+            
+            }
+            e->active = true;
+
             state.scenemgr.scenes[sceneName].entities.push_back(e->id);
 
         }
@@ -170,6 +183,44 @@ if (it != colorToSpriteNameMap.end()) {
     stbi_image_free(data);
 }
 
+glm::vec2 getColliderCenter(const Entity& e) {
+    // sprite origin is top‐left. colliderOffset is how many pixels
+    // down/right from that to the TOP‐LEFT corner of the smaller box.
+    glm::vec2 boxTopLeft = {
+        e.position.x + e.colliderOffset.x,
+        e.position.y + e.colliderOffset.y
+    };
+    // center = topLeft + halfSize
+    return {
+      boxTopLeft.x + e.halfSize.x,
+      boxTopLeft.y + e.halfSize.y
+    };
+}
+
+bool AABBOverlap(const Entity& a, const Entity& b) {
+    glm::vec2 ca = getColliderCenter(a);
+    glm::vec2 cb = getColliderCenter(b);
+    float dx = std::abs(ca.x - cb.x);
+    float dy = std::abs(ca.y - cb.y);
+    return dx <= (a.halfSize.x + b.halfSize.x)
+        && dy <= (a.halfSize.y + b.halfSize.y);
+}
+void moveWithCollision(Entity& e,
+                       const glm::vec2& delta,
+                       const std::vector<Entity*>& colliders)
+{
+    glm::vec3 oldPos = e.position;
+    e.position.x += delta.x;
+    e.position.y += delta.y;
+
+    for (auto* other : colliders) {
+        if (other == &e || !other->collidable) continue;
+        if (AABBOverlap(e, *other)) {
+            e.position = oldPos;
+            break;
+        }
+    }
+}
 
 static unsigned char temp_arena_memory[ENTITY_ARENA_SIZE];
 State state = {};
@@ -195,6 +246,10 @@ void init() {
     load(&state.resourceManager, "sandbox/fonts/Roboto.ttf", nullptr, FONT, "defaultfont", 48);
     load(&state.resourceManager, "sandbox/shaders/text.vert", "sandbox/shaders/text.frag", SHADER, "text");
     load(&state.resourceManager, "sandbox/shaders/sprite.vert", "sandbox/shaders/sprite.frag", SHADER, "sprite");
+    load(&state.resourceManager,
+         "sandbox/shaders/line.vert",
+         "sandbox/shaders/line.frag",
+         SHADER, "line");
     if (!spritesheet)
     {
         DEBUG_ERROR("spritesheet error");
@@ -232,35 +287,29 @@ void init() {
     text_1_e->type = TEXT;
     text_1_e->color = glm::vec3(1.0f, 0.0f,0.0f);
     text_1_e->scale = 1.0;
-    text_1_e->position = glm::vec3(0.0f, 20.0f, 0.0f);
+    text_1_e->position = glm::vec3(0.0f, 20.0f, 1.0f);
     state.text_1 = text_1_e;
 
     Entity* player = create_entity("player");
     player->type = PLAYER;
     player->scale = 1.0;
-    player->position = glm::vec3(0.0f, 10.0f, 3.0f);
+    player->position = glm::vec3(80.0f, 80.0f, 3.0f);
     player->sprite = state.spriteManager.getSprite("player");
     player->active = true;
     player->shader_name = "sprite";
     player->VAO = state.quadVAO;
+float spriteW = 32.0f, spriteH = 64.0f;
+// halfSize = {halfWidth, halfHeight} of the smaller box
+player->halfSize       = { spriteW * 0.5f,  spriteH * 0.5f * 0.5f }; 
+//           = {16, 16}
+
+// colliderOffset.x = 0  (box is full width, so no horizontal shift)
+// colliderOffset.y = spriteH - boxHeight = 64 - 32 = 32
+player->colliderOffset = { 0.0f, spriteH - (player->halfSize.y * 2.5f) };
+    player->collidable = true;
     state.player = player;
 
-    // state.scenemgr.addScene(Scene{
-    //     .name = "OverWorld",
-    //     .entities = std::vector<entityId>(),
-    //     .active = true,
-    //     .init = [](State &s) {
-    //         static std::unordered_map<uint32_t, const char*> colorToSprite = {
-    //             { 0x00FF16FF, "grass"  },  // pure green → tree
-    //         };
-    //         loadFromBluePrint(s, 
-    //                           "assets/test_game/testWorld1.png",
-    //                           32, 32,
-    //                           colorToSprite,
-    //                           "OverWorld" );
-    //     },
-    //     .teardown = {}
-    // });
+
 state.scenemgr.addScene(Scene{
     // [0] name
     "OverWorld",
@@ -271,7 +320,8 @@ state.scenemgr.addScene(Scene{
     // [3] init
     [](State &s) {
         static std::unordered_map<uint32_t, const char*> colorToSprite = {
-            { 0x00FF16FF, "grass" },  // pure green → grass
+            { 0x00FF16FF, "grass" },  
+            { 0x0000FFFF, "water" },  
         };
         loadFromBluePrint(
             s,
@@ -310,6 +360,26 @@ printf("=== Entity Dump (count = %zu) ===\n", state.entitiySystem->entity_count)
     }
     printf("===============================\n");
 
+    #ifdef DEBUG_ENABLED
+        // get program handle
+        state.lineShader = state.resourceManager
+                       .getResourceByName("line")->data.i;
+
+        // get uniform locations
+        state.uMVPLoc   = glGetUniformLocation(state.lineShader, "uMVP");
+        state.uColorLoc = glGetUniformLocation(state.lineShader, "uColor");
+
+        // create a dynamic VBO for up to 4 verts
+        glGenVertexArrays(1, &state.debugVAO);
+        glGenBuffers(1, &state.debugVBO);
+        glBindVertexArray(state.debugVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, state.debugVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*4, nullptr, GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+        glBindVertexArray(0);
+    #endif
+
 }
 
 void process_input(float dt) {
@@ -337,7 +407,7 @@ void process_input(float dt) {
         #endif
 }
 
-void update_game() {
+void update_game(float dt) {
         #ifdef DEBUG_ENABLED
             //@hotreload shaders
             reloadChangedShaders(&state.resourceManager);
@@ -345,8 +415,43 @@ void update_game() {
         
         uint32_t frameStart = SDL_GetTicks();
 
-        glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        static std::vector<Entity*> colliders;
+        colliders.clear();
+
+        for (auto id : state.scenemgr.current->entities) {
+            Entity& ent = state.entitiySystem->entities[id];
+            if (ent.active && ent.collidable)
+                colliders.push_back(&ent);
+        }
+        // include player too if stored separately:
+        if (state.player->active && state.player->collidable)
+            colliders.push_back(state.player);
+
+        // 2) Compute delta movement
+        glm::vec3 dir3 = state.inputManager.getMovementDirection();
+        glm::vec2 dir  = { dir3.x, dir3.y };
+        if (glm::length(dir) > 0.0f) dir = glm::normalize(dir);
+        glm::vec2 movement = dir * 100.0f * dt;  // e.g. 100px/sec * dt
+
+        // 3) Move player with collision
+        moveWithCollision(*state.player, movement, colliders);
+   //only use follow cam in overworld
+  {
+    float px = state.player->position.x
+             + state.player->halfSize.x
+             + state.player->colliderOffset.x;
+    float py = state.player->position.y
+             + state.player->halfSize.y
+             + state.player->colliderOffset.y;
+
+    state.camera.position.x = px - (state.camera.width  * 0.5f);
+    state.camera.position.y = py - (state.camera.height * 0.5f);
+
+    UpdateCamera(state.camera);
+  }
 
         {
             for (auto id : state.scenemgr.current->entities) {
@@ -370,11 +475,49 @@ void update_game() {
             renderSprite(state.resourceManager.getResourceByName("sprite")->data.i, state.player, state.camptr, &state.renderSystem);
         }
 
-        #ifdef DEBUG_ENABLED
-            if(state.editor.active) {
-                state.editor.draw_editor();
-            }
-        #endif
+#ifdef DEBUG_ENABLED
+    auto& cam = *state.camptr;
+    glm::mat4 mvp = cam.projection * cam.view;
+
+    glUseProgram(state.lineShader);
+    glUniformMatrix4fv(state.uMVPLoc, 1, GL_FALSE, &mvp[0][0]);
+    glUniform3f(state.uColorLoc, 1.0f, 0.0f, 0.0f); // red debug boxes
+    glBindVertexArray(state.debugVAO);
+
+    // Build collider list (clear old)
+    std::vector<Entity*> debugColliders;
+    for (auto id : state.scenemgr.current->entities) {
+        Entity& e = state.entitiySystem->entities[id];
+        if (e.active && e.collidable)
+            debugColliders.push_back(&e);
+    }
+    if (state.player->active && state.player->collidable)
+        debugColliders.push_back(state.player);
+
+    // Draw each box
+    for (auto* e : debugColliders) {
+        // Top-left of collider in world coords
+        float x = e->position.x + e->colliderOffset.x;
+        float y = e->position.y + e->colliderOffset.y;
+        // Full size
+        float w = e->halfSize.x * 2.0f;
+        float h = e->halfSize.y * 2.0f;
+
+        float verts[8] = {
+            x,   y,
+            x+w, y,
+            x+w, y+h,
+            x,   y+h
+        };
+
+        glBindBuffer(GL_ARRAY_BUFFER, state.debugVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+        glDrawArrays(GL_LINE_LOOP, 0, 4);
+    }
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+#endif
 
         state.window.swapBuffers();
 
@@ -388,6 +531,8 @@ void update_game() {
 void deinit(){
     #ifdef DEBUG_ENABLED
         state.editor.deinit_editor();
+        glDeleteBuffers(1, &state.debugVBO);
+        glDeleteVertexArrays(1, &state.debugVAO);
     #endif
     FontManager::DestroyInstance();
     destroyResourceManager(&state.resourceManager);
@@ -402,7 +547,7 @@ int main() {
     while (state.isRunning) {
         float dt = calculateDeltaTime();
         process_input(dt);
-        update_game();
+        update_game(dt);
     }
     
     deinit();

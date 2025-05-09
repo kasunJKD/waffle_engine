@@ -181,8 +181,8 @@ glm::vec3 InputManager::getMovementDirection() const {
 }
 
 void InputManager::loadDefaultKeyMappings() {
-    keyMappings[SDLK_w] = glm::vec3(0.0f, 1.0f, 0.0f);   // Move up
-    keyMappings[SDLK_s] = glm::vec3(0.0f, -1.0f, 0.0f);  // Move down
+    keyMappings[SDLK_w] = glm::vec3(0.0f, -1.0f, 0.0f);   // Move up
+    keyMappings[SDLK_s] = glm::vec3(0.0f, 1.0f, 0.0f);  // Move down
     keyMappings[SDLK_a] = glm::vec3(-1.0f, 0.0f, 0.0f);  // Move left
     keyMappings[SDLK_d] = glm::vec3(1.0f, 0.0f, 0.0f);   // Move right
 }

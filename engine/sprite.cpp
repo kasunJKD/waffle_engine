@@ -59,6 +59,20 @@ SpriteManager* sp_mgr
         sp_mgr->spriteTable->ht_insert("grass", s);
         sp_mgr->count++;
     }
+    {
+        Sprite* s = (Sprite*)Pool_Allocator::pool_alloc(sp_mgr->pool);
+        s->texture_id = sp_mgr->r_mgr->getResourceByName("spritesheet")->data.i;
+        s->frame_size= glm::vec2(32, 32);
+        s->sheet_size = glm::ivec2(512, 288);  // Atlas = pixel pos
+        s->pixel_offset = glm::vec2(32,0);
+        s->frame_count = 1;
+        s->frame_duration = 0.1;
+
+        DEBUG_ASSERT(s!=nullptr, "water sprite is nullptr");
+
+        sp_mgr->spriteTable->ht_insert("water", s);
+        sp_mgr->count++;
+    }
 
     //....continue others
     
