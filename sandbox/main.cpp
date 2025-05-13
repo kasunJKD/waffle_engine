@@ -170,9 +170,16 @@ void loadFromBluePrint(State &state, const char* filename, int tileW, int tileH,
              e->colliderOffset = { 0.0f,  0.0f };
             // Mark it collidable if you want physics on it:
             e->collidable = false;
+
             if (std::strcmp(spriteName, "water") == 0) {
              e->collidable = true;
-            
+            } else if (std::strcmp(spriteName, "puzzle") == 0) {
+                e->collidable = true;
+                e->type = TRIGGER_COLOR_BLOCK;
+            } else if (std::strcmp(spriteName, "puzzle_valid") == 0) {
+                e->collidable = true;
+                e->type = TRIGGER_COLOR_BLOCK;
+                e->valid_block = true;
             }
             e->active = true;
 
@@ -215,7 +222,12 @@ void moveWithCollision(Entity& e,
 
     for (auto* other : colliders) {
         if (other == &e || !other->collidable) continue;
-        if (AABBOverlap(e, *other)) {
+        if (AABBOverlap(e, *other) && other->type == TRIGGER_COLOR_BLOCK && !other->triggered) {
+            other->on_top = true;
+        } else {
+            other->on_top = false;
+        }
+        if (AABBOverlap(e, *other) && other->type != TRIGGER_COLOR_BLOCK) {
             e.position = oldPos;
             break;
         }
@@ -298,14 +310,14 @@ void init() {
     player->active = true;
     player->shader_name = "sprite";
     player->VAO = state.quadVAO;
-float spriteW = 32.0f, spriteH = 64.0f;
-// halfSize = {halfWidth, halfHeight} of the smaller box
-player->halfSize       = { spriteW * 0.5f,  spriteH * 0.5f * 0.5f }; 
-//           = {16, 16}
+    float spriteW = 32.0f, spriteH = 64.0f;
+    // halfSize = {halfWidth, halfHeight} of the smaller box
+    player->halfSize       = { spriteW * 0.5f,  spriteH * 0.5f * 0.5f }; 
+    //           = {16, 16}
 
-// colliderOffset.x = 0  (box is full width, so no horizontal shift)
-// colliderOffset.y = spriteH - boxHeight = 64 - 32 = 32
-player->colliderOffset = { 0.0f, spriteH - (player->halfSize.y * 2.5f) };
+    // colliderOffset.x = 0  (box is full width, so no horizontal shift)
+    // colliderOffset.y = spriteH - boxHeight = 64 - 32 = 32
+    player->colliderOffset = { 0.0f, spriteH - (player->halfSize.y * 2.5f) };
     player->collidable = true;
     state.player = player;
 
@@ -322,6 +334,8 @@ state.scenemgr.addScene(Scene{
         static std::unordered_map<uint32_t, const char*> colorToSprite = {
             { 0x00FF16FF, "grass" },  
             { 0x0000FFFF, "water" },  
+            { 0xFF6F00FF, "puzzle" },  
+            { 0xF6A86BFF, "puzzle_valid" },  
         };
         loadFromBluePrint(
             s,
@@ -438,20 +452,20 @@ void update_game(float dt) {
 
         // 3) Move player with collision
         moveWithCollision(*state.player, movement, colliders);
-   //only use follow cam in overworld
-  {
-    float px = state.player->position.x
-             + state.player->halfSize.x
-             + state.player->colliderOffset.x;
-    float py = state.player->position.y
-             + state.player->halfSize.y
-             + state.player->colliderOffset.y;
+       //only use follow cam in overworld
+      {
+        float px = state.player->position.x
+                 + state.player->halfSize.x
+                 + state.player->colliderOffset.x;
+        float py = state.player->position.y
+                 + state.player->halfSize.y
+                 + state.player->colliderOffset.y;
 
-    state.camera.position.x = px - (state.camera.width  * 0.5f);
-    state.camera.position.y = py - (state.camera.height * 0.5f);
+        state.camera.position.x = px - (state.camera.width  * 0.5f);
+        state.camera.position.y = py - (state.camera.height * 0.5f);
 
-    UpdateCamera(state.camera);
-  }
+        UpdateCamera(state.camera);
+      }
 
         {
             for (auto id : state.scenemgr.current->entities) {
@@ -475,49 +489,49 @@ void update_game(float dt) {
             renderSprite(state.resourceManager.getResourceByName("sprite")->data.i, state.player, state.camptr, &state.renderSystem);
         }
 
-#ifdef DEBUG_ENABLED
-    auto& cam = *state.camptr;
-    glm::mat4 mvp = cam.projection * cam.view;
-
-    glUseProgram(state.lineShader);
-    glUniformMatrix4fv(state.uMVPLoc, 1, GL_FALSE, &mvp[0][0]);
-    glUniform3f(state.uColorLoc, 1.0f, 0.0f, 0.0f); // red debug boxes
-    glBindVertexArray(state.debugVAO);
-
-    // Build collider list (clear old)
-    std::vector<Entity*> debugColliders;
-    for (auto id : state.scenemgr.current->entities) {
-        Entity& e = state.entitiySystem->entities[id];
-        if (e.active && e.collidable)
-            debugColliders.push_back(&e);
-    }
-    if (state.player->active && state.player->collidable)
-        debugColliders.push_back(state.player);
-
-    // Draw each box
-    for (auto* e : debugColliders) {
-        // Top-left of collider in world coords
-        float x = e->position.x + e->colliderOffset.x;
-        float y = e->position.y + e->colliderOffset.y;
-        // Full size
-        float w = e->halfSize.x * 2.0f;
-        float h = e->halfSize.y * 2.0f;
-
-        float verts[8] = {
-            x,   y,
-            x+w, y,
-            x+w, y+h,
-            x,   y+h
-        };
-
-        glBindBuffer(GL_ARRAY_BUFFER, state.debugVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
-        glDrawArrays(GL_LINE_LOOP, 0, 4);
-    }
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-#endif
+//#ifdef DEBUG_ENABLED
+//     auto& cam = *state.camptr;
+//     glm::mat4 mvp = cam.projection * cam.view;
+//
+//     glUseProgram(state.lineShader);
+//     glUniformMatrix4fv(state.uMVPLoc, 1, GL_FALSE, &mvp[0][0]);
+//     glUniform3f(state.uColorLoc, 1.0f, 0.0f, 0.0f); // red debug boxes
+//     glBindVertexArray(state.debugVAO);
+//
+//     // Build collider list (clear old)
+//     std::vector<Entity*> debugColliders;
+//     for (auto id : state.scenemgr.current->entities) {
+//         Entity& e = state.entitiySystem->entities[id];
+//         if (e.active && e.collidable)
+//             debugColliders.push_back(&e);
+//     }
+//     if (state.player->active && state.player->collidable)
+//         debugColliders.push_back(state.player);
+//
+//     // Draw each box
+//     for (auto* e : debugColliders) {
+//         // Top-left of collider in world coords
+//         float x = e->position.x + e->colliderOffset.x;
+//         float y = e->position.y + e->colliderOffset.y;
+//         // Full size
+//         float w = e->halfSize.x * 2.0f;
+//         float h = e->halfSize.y * 2.0f;
+//
+//         float verts[8] = {
+//             x,   y,
+//             x+w, y,
+//             x+w, y+h,
+//             x,   y+h
+//         };
+//
+//         glBindBuffer(GL_ARRAY_BUFFER, state.debugVBO);
+//         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+//         glDrawArrays(GL_LINE_LOOP, 0, 4);
+//     }
+//
+//     glBindVertexArray(0);
+//     glUseProgram(0);
+// #endif
 
         state.window.swapBuffers();
 

@@ -240,6 +240,12 @@ void renderSprite(GLuint shader, Entity* e, Camera* camera, RenderSystem* rs) {
     model = glm::scale(model, glm::vec3(e->sprite->frame_size * e->scale, 1.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 
+    if (e->on_top) {
+        glUniform1f(glGetUniformLocation(shader, "on_top"), e->on_top);
+    } else {
+        glUniform1f(glGetUniformLocation(shader, "on_top"), false);
+    }
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, e->sprite->texture_id);
     glUniform1i(glGetUniformLocation(shader, "u_tex"), 0);

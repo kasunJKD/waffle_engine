@@ -2,6 +2,7 @@
 #define ENTITY_H
 #include "glm/fwd.hpp"
 #include "resourceManager.h"
+#include <cstddef>
 #pragma once
 #include <cstdint>
 #include "allocator.h"
@@ -20,7 +21,8 @@ enum EntityType {
     WORLD,
     CAMERA,
     MONSTER,
-    TEXT
+    TEXT, 
+    TRIGGER_COLOR_BLOCK,
 };
 
 enum WorldType {
@@ -53,9 +55,15 @@ struct Entity {
     bool active;
 
     //collisions
- glm::vec2 halfSize;       // half‐width/height of the box
-  glm::vec2 colliderOffset; // offset from sprite top‐left to box top‐left
-  bool      collidable;
+    glm::vec2 halfSize;       // half‐width/height of the box
+    glm::vec2 colliderOffset; // offset from sprite top‐left to box top‐left
+    bool      collidable;
+
+    //trigger data
+    bool on_top;
+    bool triggered;
+    bool valid_block;
+
 };
 
 

@@ -21,7 +21,16 @@ in vec2 v_uv;
 out vec4 FragColor;
 
 uniform sampler2D u_tex;
+uniform vec4 highlight_color;
+uniform vec4 set_active_color;
+uniform bool on_top;
 
 void main() {
-    FragColor = texture(u_tex, v_uv);
+    if (on_top) {
+        FragColor = texture(u_tex, v_uv);
+        FragColor = FragColor * vec4(1.0, 0.0, 0.0, 1.0);
+
+    } else {
+        FragColor = texture(u_tex, v_uv);
+    }
 }
