@@ -1,118 +1,111 @@
-cmake_minimum_required(VERSION 3.15)
-project(EngineSolution)
+cmake_minimum_required(VERSION 3.23)
+project(Sandbox LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---------------------------------------------------------------------------
-# Configure build types and output directories
+# Build type & output folders
 # ---------------------------------------------------------------------------
-if(NOT CMAKE_BUILD_TYPE)
-  message(STATUS "No build type selected, defaulting to Debug")
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Debug/Release)" FORCE)
+if (NOT CMAKE_BUILD_TYPE)
+    message(STATUS "No build type selected – defaulting to Debug")
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Debug / Release" FORCE)
 endif()
 
-# For a 64-bit build (when supported by the generator)
-if(NOT CMAKE_GENERATOR STREQUAL "Ninja")
-  if(NOT CMAKE_GENERATOR_PLATFORM)
-    set(CMAKE_GENERATOR_PLATFORM x64)
-  endif()
-endif()
-
-# Set output directories for all targets
 set(OUTPUT_DIR ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
+foreach(dir RUNTIME LIBRARY ARCHIVE)
+    set(CMAKE_${dir}_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
+endforeach()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+
 # ---------------------------------------------------------------------------
-# Engine Static Library
+# Compiler warnings & optimisation flags
 # ---------------------------------------------------------------------------
-
-# Collect source files for Engine.
-# Note: Using file(GLOB_RECURSE ...) is convenient but not recommended for
-# production since new files added to the directories are not automatically
-# picked up by CMake unless you rerun CMake.
-file(GLOB_RECURSE ENGINE_SOURCES
-  "${CMAKE_SOURCE_DIR}/engine/*.cpp"
-  "${CMAKE_SOURCE_DIR}/engine/*.h"
-  "${CMAKE_SOURCE_DIR}/vendors/include/glad/src/glad.c"
-)
-
-add_library(Engine STATIC ${ENGINE_SOURCES})
-
-# Include directories for Engine.
-target_include_directories(Engine PUBLIC
-  "${CMAKE_SOURCE_DIR}/vendors/include"             # Common vendor headers
-  "${CMAKE_SOURCE_DIR}/vendors/include/glad/include"  # GLAD headers
-  "${CMAKE_SOURCE_DIR}/vendors/include/SDL2"          # SDL2 headers
-  "${CMAKE_SOURCE_DIR}/vendors"                       # Additional vendor sources
-  "${CMAKE_SOURCE_DIR}/imgui"                         # ImGui headers
-  "${CMAKE_SOURCE_DIR}/imgui/backends"                # ImGui backend headers
-  "${CMAKE_SOURCE_DIR}/vendors/include/assimp"        # Assimp headers
-)
-
-# Windows-specific linking for Engine.
-if(WIN32)
-  # Specify directories where the linker can find the libraries.
-  target_link_directories(Engine PRIVATE
-    "${CMAKE_SOURCE_DIR}/vendors/lib/SDL2"
-    "${CMAKE_SOURCE_DIR}/vendors/lib/assimp"
-    "${CMAKE_SOURCE_DIR}/vendors/lib/openal"
-  )
-
-  # Link against SDL2, SDL2main, OpenAL32, and the Assimp library.
-  target_link_libraries(Engine PRIVATE
-    SDL2
-    SDL2main
-    OpenAL32
-    assimp-vc143-mt
-  )
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} INTERFACE /W4)
+else()
+    add_compile_options(-Wall -Wextra -pedantic)
+    if (CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_compile_options(-O2)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------
-# Sandbox Executable
+# Source files
 # ---------------------------------------------------------------------------
+set(VENDOR_DIR "${CMAKE_SOURCE_DIR}/vendors")
 
-# Collect source files for Sandbox.
-file(GLOB_RECURSE SANDBOX_SOURCES
-  "${CMAKE_SOURCE_DIR}/sandbox/*.cpp"
-  "${CMAKE_SOURCE_DIR}/sandbox/*.h"
+file(GLOB_RECURSE PROJECT_SRC CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/src/*.cpp"
+    "${CMAKE_SOURCE_DIR}/src/*.h"
 )
 
-add_executable(Sandbox ${SANDBOX_SOURCES})
+set(IMGUI_SRC
+    "${VENDOR_DIR}/imgui/imgui.cpp"
+    "${VENDOR_DIR}/imgui/imgui_draw.cpp"
+    "${VENDOR_DIR}/imgui/imgui_tables.cpp"
+    "${VENDOR_DIR}/imgui/imgui_widgets.cpp"
+    "${VENDOR_DIR}/imgui/imgui_demo.cpp"       # remove if not needed
+    "${VENDOR_DIR}/imgui/backends/imgui_impl_sdl2.cpp"
+    "${VENDOR_DIR}/imgui/backends/imgui_impl_opengl3.cpp"
+)
 
-# Include directories for Sandbox.
+set(GLAD_SRC "${VENDOR_DIR}/include/glad/src/glad.c")
+
+add_executable(Sandbox
+    ${PROJECT_SRC}
+    ${IMGUI_SRC}
+    ${GLAD_SRC}
+)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(Sandbox PRIVATE DEBUG_ENABLED)
+endif()
+
+# ---------------------------------------------------------------------------
+# Include dirs
+# ---------------------------------------------------------------------------
 target_include_directories(Sandbox PRIVATE
-  "${CMAKE_SOURCE_DIR}/engine"                       # Engine project headers
-  "${CMAKE_SOURCE_DIR}/sandbox"                      # Sandbox specific headers
-  "${CMAKE_SOURCE_DIR}/vendors"                      # Additional vendor sources
-  "${CMAKE_SOURCE_DIR}/vendors/include"              # Common vendor headers
-  "${CMAKE_SOURCE_DIR}/vendors/include/SDL2"         # SDL2 headers
-  "${CMAKE_SOURCE_DIR}/vendors/include/glad/include" # GLAD headers
-  "${CMAKE_SOURCE_DIR}/imgui"                        # ImGui headers
-  "${CMAKE_SOURCE_DIR}/imgui/backends"               # ImGui backend headers
-  "${CMAKE_SOURCE_DIR}/vendors/include/assimp"       # Assimp headers
+    "${CMAKE_SOURCE_DIR}/src"
+    "${VENDOR_DIR}/include"
+    "${VENDOR_DIR}/include/glad/include"
+    "${VENDOR_DIR}/include/SDL2"
+    "${VENDOR_DIR}/include/freetype"
+    "${VENDOR_DIR}/include/assimp"
+    "${VENDOR_DIR}/imgui"
+    "${VENDOR_DIR}/imgui/backends"
 )
 
-# Link Sandbox against the Engine library.
-target_link_libraries(Sandbox PRIVATE Engine)
+target_compile_definitions(Sandbox PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-if(WIN32)
-  # Add library directories for Sandbox as well.
-  target_link_directories(Sandbox PRIVATE
-    "${CMAKE_SOURCE_DIR}/vendors/lib/SDL2"
-    "${CMAKE_SOURCE_DIR}/vendors/lib/assimp"
-    "${CMAKE_SOURCE_DIR}/vendors/lib/openal"
-  )
+# ---------------------------------------------------------------------------
+# Windows-specific libraries
+# ---------------------------------------------------------------------------
+if (WIN32)
+    find_package(OpenGL REQUIRED)
 
-  # Link additional libraries required by Sandbox.
-  target_link_libraries(Sandbox PRIVATE
-    SDL2
-    SDL2main
-    OpenAL32
-  )
+    # Directories where .lib files live
+    target_link_directories(Sandbox PRIVATE
+        "${VENDOR_DIR}/lib/SDL2"
+        "${VENDOR_DIR}/lib/assimp"
+        "${VENDOR_DIR}/lib/openal"
+        "${VENDOR_DIR}/lib/freetype"
+    )
+
+    target_link_libraries(Sandbox PRIVATE
+        SDL2 SDL2main
+        OpenAL32
+        assimp-vc143-mt
+        freetype
+        ${OPENGL_gl_LIBRARY}   # opengl32 on Win
+        imm32                  # ImGui needs it, otherwise unresolved externals
+        setupapi               # imgui_impl_win32 uses it on multi-window setups
+    )
+
+    # Nice-to-have: makes F5 in VS run from your repo root
+    if (MSVC)
+        set_target_properties(Sandbox PROPERTIES
+            VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+    endif()
 endif()
-
-if(MSVC)
-  set_target_properties(Sandbox PROPERTIES
-    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-  )
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(Sandbox PRIVATE -Wno-language-extension-token)
 endif()

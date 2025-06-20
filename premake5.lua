@@ -1,49 +1,63 @@
-workspace("Engine")
+workspace("SandboxSolution")
 configurations({ "Debug", "Release" })
 platforms({ "x64" })
 location("build")
 
-project("Engine")
-kind("StaticLib") -- Static library for Engine
-language("C++")
-targetdir("bin/%{cfg.buildcfg}/Engine")
-includedirs({
-	"vendors/include",
-	"vendors/include/glad/include", -- Include glad headers
-	"vendors/include/SDL2",
-	"vendors",
-	"imgui",
-	"imgui/backends",
-	"vendors/include/assimp",
-})
-files({
-	"engine/**.cpp",
-	"engine/**.h",
-	"vendors/include/glad/src/glad.c", -- Ensure glad.c is included in the project
-})
-
-filter("system:windows")
-links({ "SDL2", "SDL2main", "OpenAL32", "assimp-vc143-mt" })
-libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp", "vendors/lib/openal", "vendors/lib/assimp/assimp-vc143-mt.lib" })
-
 project("Sandbox")
 kind("ConsoleApp")
 language("C++")
-targetdir("bin/%{cfg.buildcfg}/Sandbox")
+cppdialect("C++17")
+targetdir("bin/%{cfg.buildcfg}")
+objdir("bin-int/%{cfg.buildcfg}")
+
 files({
-	"sandbox/**.cpp",
-	"sandbox/**.h",
+	"src/**.cpp",
+	"src/**.h",
+	"vendors/include/glad/src/glad.c",
+	"vendors/imgui/*.cpp",
+	"vendors/imgui/backends/imgui_impl_sdl2.cpp",
+	"vendors/imgui/backends/imgui_impl_opengl3.cpp",
 })
+
 includedirs({
-	"engine",
-	"sandbox",
-	"vendors",
-	"vendors/include", -- Include SDL2, GLAD, and other dependencies
-	"vendors/include/SDL2",
+	"src",
+	"vendors/include",
 	"vendors/include/glad/include",
-	"imgui",
-	"imgui/backends",
+	"vendors/include/SDL2",
+	"vendors/include/freetype",
 	"vendors/include/assimp",
+	"vendors/imgui",
+	"vendors/imgui/backends",
 })
-links({ "Engine", "SDL2", "SDL2main", "OpenAL32" }) -- Include glad here
-libdirs({ "vendors/lib/SDL2", "vendors/lib/assimp", "vendors/lib/openal" })
+
+libdirs({
+	"vendors/lib/SDL2",
+	"vendors/lib/assimp",
+	"vendors/lib/openal",
+	"vendors/lib/freetype",
+})
+
+links({
+	"SDL2",
+	"SDL2main",
+	"OpenAL32",
+	"assimp-vc143-mt",
+	"freetype",
+	"opengl32",
+	"imm32",
+	"setupapi",
+})
+
+filter("system:windows")
+systemversion("latest")
+buildoptions("/W4")
+
+filter("configurations:Debug")
+runtime("Debug")
+symbols("On")
+defines({ "DEBUG_ENABLED", "IMGUI_IMPL_OPENGL_LOADER_GLAD" })
+
+filter("configurations:Release")
+runtime("Release")
+optimize("Speed")
+defines({ "NDEBUG", "IMGUI_IMPL_OPENGL_LOADER_GLAD" })
