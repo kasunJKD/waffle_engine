@@ -15,3 +15,4 @@ TODO
 - allocators
 - utilise allocators
 - defined hashes and utilise them
+- editor section

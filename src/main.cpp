@@ -7,7 +7,6 @@
 #define SCREENSIZE_WIDTH 960
 #define SCREENSIZE_HEIGTH 540
 
-
 const uint32_t TARGET_FPS = 60;
 const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; 
 
@@ -45,7 +44,6 @@ void update_game() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
         state.window.swapBuffers();
 
         // Frame limiting
@@ -57,7 +55,6 @@ void update_game() {
 
 void process_input() {
         state.inputManager.update(state.isRunning, &state.window);
-
 }
 
 void deinit(){
