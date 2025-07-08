@@ -10,10 +10,11 @@ struct Camera {
     vec3 cameraRight;
     vec3 cameraUp;
 
-    //TODO
     mat4 view;
 
     void init();
     void update();
     void deinit();
+
+    bool debug = false;
 };

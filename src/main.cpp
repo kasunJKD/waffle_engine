@@ -1,5 +1,7 @@
 #include <cstdint>
 
+#include "camera.h"
+#include "editor.h"
 #include "input_s.h"
 #include "window.h"
 #include "debug.h"
@@ -22,7 +24,11 @@ float calculateDeltaTime() {
 struct State {
     Window window; 
     InputManager inputManager;
+    Camera camera;
+    Editor editor;
+    
     bool isRunning;
+    bool isDebug;
 };
 
 State state = {};
@@ -34,6 +40,9 @@ void init() {
     }
 
     state.inputManager.init();
+    state.camera.init();
+
+    Editor::activate_editor(&state.editor);
     
     state.isRunning = true;
 }
@@ -43,14 +52,21 @@ void update_game() {
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        state.window.swapBuffers();
-
         // Frame limiting
         uint32_t frameTime = SDL_GetTicks() - frameStart;
         if (frameTime < FRAME_DELAY) {
             SDL_Delay(FRAME_DELAY - frameTime);
         }
+
+        #ifdef DEBUG_ENABLED
+            if(state.editor.active) {
+                state.editor.update();
+            }
+        #endif
+
+
+        state.window.swapBuffers();
+        
 }
 
 void process_input() {

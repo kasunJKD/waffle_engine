@@ -8,6 +8,6 @@ void Camera::init() {
     up = vec3(0.0f, 0.0f, 0.0f);
     cameraRight = cross(up, direction).normalize();
     cameraUp = cross(direction, cameraRight);
-    //TODO
-    view = mat4.lookAt();
+    
+    view = mat4::lookAt(position, target, vec3(0.0f, 1.0f, 0.0f));
 }

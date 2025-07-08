@@ -11,8 +11,11 @@
 
 ![image](https://github.com/kasunJKD/waffle_engine/assets/64832263/7f84aaf5-8b56-4763-8852-fb5c7121eddd)
 
-TODO
+INPROGRESS
 - allocators
 - utilise allocators
 - defined hashes and utilise them
 - editor section
+- camera
+- textures - resources
+- shaders - resources
