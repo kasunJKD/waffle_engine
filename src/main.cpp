@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include "allocator.h"
 #include "camera.h"
 #include "editor.h"
 #include "input_s.h"
@@ -11,6 +12,8 @@
 
 const uint32_t TARGET_FPS = 60;
 const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; 
+
+constexpr uint64_t ARENA_MEMORY_MB = 20;
 
 uint32_t lastTicks = SDL_GetTicks();
 
@@ -31,20 +34,24 @@ struct State {
     bool isDebug;
 };
 
-State state = {};
+State* state;
 
 void init() {
-    if (!state.window.init("Game", SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH)) {
+    Arena* arena = ArenaAllocateMB(ARENA_MEMORY_MB);
+
+    state = PushStruct(arena, State);
+
+    if (!state->window.init("Game", SCREENSIZE_WIDTH, SCREENSIZE_HEIGTH)) {
 	DEBUG_ERROR("SDL_Init failed: %s", SDL_GetError());
         return;
     }
 
-    state.inputManager.init();
-    state.camera.init();
+    state->inputManager.init();
+    state->camera = createCamera();
 
-    Editor::activate_editor(&state.editor);
+    Editor::activate_editor(&state->editor);
     
-    state.isRunning = true;
+    state->isRunning = true;
 }
 
 void update_game() {
@@ -59,22 +66,22 @@ void update_game() {
         }
 
         #ifdef DEBUG_ENABLED
-            if(state.editor.active) {
-                state.editor.update();
+            if(state->editor.active) {
+                state->editor.update();
             }
         #endif
 
 
-        state.window.swapBuffers();
+        state->window.swapBuffers();
         
 }
 
 void process_input() {
-        state.inputManager.update(state.isRunning, &state.window);
+        state->inputManager.update(state->isRunning, &state->window);
 }
 
 void deinit(){
-    state.window.cleanUp();
+    state->window.cleanUp();
 }
 
 int main() {
@@ -84,7 +91,7 @@ int main() {
 		DEBUG_LOG("this is debugger");
         #endif
     
-    while (state.isRunning) {
+    while (state->isRunning) {
         // float dt = calculateDeltaTime();
         // process_input(dt);
 	process_input();

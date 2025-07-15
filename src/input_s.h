@@ -3,7 +3,6 @@
 #include "window.h"
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-#include <unordered_map>
 #include <glm/glm.hpp>
 
 enum KeyState {
@@ -19,10 +18,10 @@ struct InputManager {
     void init();
     void update(bool& isRunning, Window *window);
 
-    glm::vec3 getMovementDirection() const;
-
-    std::unordered_map<SDL_Keycode, glm::vec3> keyMappings;
-    glm::vec3 movementDirection;
+    // glm::vec3 getMovementDirection() const;
+    //
+    // std::unordered_map<SDL_Keycode, glm::vec3> keyMappings;
+    // glm::vec3 movementDirection;
 
     void loadDefaultKeyMappings();
 
@@ -42,8 +41,8 @@ struct InputManager {
     int getMouseY() const;
     int getMouseWheelY() const;
 
-    std::unordered_map<SDL_Keycode, KeyState> keyStates;
-    std::unordered_map<Uint8, KeyState> mouseButtonStates;
+    // std::unordered_map<SDL_Keycode, KeyState> keyStates;
+    // std::unordered_map<Uint8, KeyState> mouseButtonStates;
     int mouseX = 0, mouseY = 0;
     int mouseWheelY = 0;
 
