@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include "allocator.h"
+#include "assetsManager.h"
 #include "camera.h"
 #include "editor.h"
 #include "input_s.h"
@@ -28,7 +29,11 @@ struct State {
     Window window; 
     InputManager inputManager;
     Camera camera;
+    AssetManager* asset_manager; //keep assets manager in a seperate arena and store a pointer to it
+
+    #ifdef DEBUG_ENABLED
     Editor editor;
+    #endif
     
     bool isRunning;
     bool isDebug;
@@ -87,10 +92,6 @@ void deinit(){
 int main() {
     init();
 
-        #ifdef DEBUG_ENABLED
-		DEBUG_LOG("this is debugger");
-        #endif
-    
     while (state->isRunning) {
         // float dt = calculateDeltaTime();
         // process_input(dt);

@@ -19,11 +19,11 @@ static inline void* os_reserve_memory(size_t sizebyte) {
     return VirtualAlloc(NULL, sizebyte, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 }
 
-
 static inline void os_release_memory(void* mem) {
     VirtualFree(mem, 0, MEM_RELEASE);
 }
 
+//TODO need to add align and revit the allocations 
 inline Arena* ArenaAlloc(uint8_t size) {
     const size_t header = sizeof(Arena);
     const size_t requested = sizeof(header + size);
@@ -48,6 +48,12 @@ inline void* ArenaPush(Arena* a, size_t inBytes) {
     return ptr;
 }
 
+inline void* ArenaPushZero (Arena* a, size_t bytes){
+    void* p = ArenaPush(a, bytes); 
+    memset(p, 0, bytes);
+    return p;
+}
+
 inline void ArenaDeallocate(Arena* a) {
     if (!a) return;
     os_release_memory((void*)a);
@@ -55,5 +61,7 @@ inline void ArenaDeallocate(Arena* a) {
 
 #define PushArray(a,type,count)       (type*)ArenaPush((a), sizeof(type)*(count))
 #define PushStruct(a,type)            PushArray((a), type, 1)
+#define PushArrayZero(a,type,count)       (type*)ArenaPushZero((a), sizeof(type)*(count))
+#define PushStructZero(a,type)            PushArrayZero((a), type, 1)
 
 #endif
