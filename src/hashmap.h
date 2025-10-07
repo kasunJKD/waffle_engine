@@ -7,7 +7,7 @@
 
 struct ht_item {
     const char* key;
-    void* value;
+    uintptr_t value;
 };
 
 struct ht {
@@ -18,8 +18,8 @@ struct ht {
 };
 
 ht     ht_create   (Arena* a, size_t initialCap);           /* cap rounded to pow-2 */
-void   ht_put      (ht* h, const char* key, void* value);   /* key duplicated into arena */
-void*  ht_get      (const ht* h, const char* key);          /* NULL if not present */
+void   ht_put      (ht* h, const char* key, uintptr_t value);   /* key duplicated into arena */
+ uintptr_t    ht_get      (const ht* h, const char* key);          /* NULL if not present */
 void   ht_clear    (ht* h);                                 /* keeps capacity, resets len */
 
 #endif

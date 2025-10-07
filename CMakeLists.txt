@@ -65,6 +65,7 @@ endif()
 # ---------------------------------------------------------------------------
 target_include_directories(Sandbox PRIVATE
     "${CMAKE_SOURCE_DIR}/src"
+    "${VENDOR_DIR}"
     "${VENDOR_DIR}/include"
     "${VENDOR_DIR}/include/glad/include"
     "${VENDOR_DIR}/include/SDL2"

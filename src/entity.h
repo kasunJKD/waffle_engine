@@ -1,15 +1,16 @@
 #ifndef ENTITY_H 
 #define ENTITY_H
 
+#include "allocator.h"
 #include "defines.h"
 #include <cstdint>
 
 enum Type {
-    TEST_ENTITY
+    T_TEST
 };
 
 enum Flag {
-    ENTITY_FLAG_TEST = 1 << 0
+    F_RENDER = 1 << 0
 };
 
 struct Entity {
@@ -18,13 +19,20 @@ struct Entity {
     Flag flag;
 
     vec3 position;
+    bool active;
 };
+
 
 struct EntityManager {
     Entity* entities;
     size_t capacity; //total slots
     size_t count; //inuse amount
 };
+
+EntityManager create_entity_manager(size_t capacity, Arena* arena);
+
+size_t add_entity(EntityManager* manager);
+Entity* get_entity(EntityManager* manager, size_t id);
 
 
 #endif

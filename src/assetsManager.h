@@ -3,6 +3,7 @@
 
 #include "hashmap.h"
 #include "shader.h"
+#include "texture.h"
 #include <cstdint>
 
 enum AssetType {
@@ -16,6 +17,7 @@ struct Asset {
     uint32_t flags;
     union {
         ShaderHandle shader;
+        TextureHandle texture;
     };
 };
 
@@ -45,7 +47,7 @@ AssetManager_Add(AssetManager* am, const char* name, Asset asset)
     assert(id < am->capacity);
     asset.id = id;
     am->assets[id] = asset;
-    ht_put(&am->nameToId, name, (void*)(uintptr_t)id);
+    ht_put(&am->nameToId, name, id);
     return id;
 }
 
@@ -58,8 +60,23 @@ AssetManager_GetById(AssetManager* am, uint32_t id)
 static inline Asset*
 AssetManager_GetByName(AssetManager* am, const char* name)
 {
-    void* v = ht_get(&am->nameToId, name);
-    return v ? &am->assets[(uintptr_t)v] : NULL;
+    uintptr_t v = ht_get(&am->nameToId, name);
+    return &am->assets[v];
 }
+
+void add_shader
+(Arena* arena,
+ AssetManager* asset_manager,
+ const char* vertpath,
+ const char* fragpath,
+ const char* asset_identifer,
+ ShaderType shaderType);
+
+void add_texture 
+(
+ AssetManager* asset_manager,
+ const char* texture_path,
+ const char* asset_identifer,
+ TextureType textureType);
 
 #endif

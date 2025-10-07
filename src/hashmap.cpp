@@ -1,6 +1,7 @@
 #include "hashmap.h"
 #include "allocator.h"
 #include <cstddef>
+#include <cstdint>
 
 static uint32_t hash_str(const char* s)
 {
@@ -26,7 +27,7 @@ ht ht_create(Arena *a, size_t initialCap)
     return h;
 }
 
-void ht_put(ht* h, const char* key, void* value)
+void ht_put(ht* h, const char* key, uintptr_t value)
 {
     assert(h->length < h->capacity * 0.75);         /* resize not implemented */
     size_t mask = h->capacity - 1;
@@ -52,7 +53,7 @@ void ht_put(ht* h, const char* key, void* value)
     }
 }
 
-void* ht_get(const ht* h, const char* key)
+uintptr_t ht_get(const ht* h, const char* key)
 {
     if (!h->capacity) return NULL;
     size_t mask = h->capacity - 1;

@@ -9,6 +9,7 @@ ReadFileIntoArena(Arena* arena, const char* path, size_t* outLen)
 {
     FILE* f = NULL;
     fopen_s(&f, path, "rb");
+
     if (!f) { fprintf(stderr, "Couldn't open %s\n", path); return NULL; }
 
     fseek(f, 0, SEEK_END);
@@ -25,80 +26,82 @@ ReadFileIntoArena(Arena* arena, const char* path, size_t* outLen)
     if (outLen) *outLen = len;
     return buf;
 }
-
 static GLuint
 CompileShader(GLenum stage, const char* src, const char* dbgName)
 {
-    GLuint s = glCreateShader(stage);
-    glShaderSource(s, 1, &src, NULL);
-    glCompileShader(s);
-
-    GLint ok = 0;
-    glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
-    if (!ok) {
-        GLint len = 0;
-        glGetShaderiv(s, GL_INFO_LOG_LENGTH, &len);
-        if (len > 1) {
-            char* log = (char*)malloc(len);
-            glGetShaderInfoLog(s, len, NULL, log);
-            fprintf(stderr, "Shader %s error:\n%s\n", dbgName, log);
-            free(log);
-        }
-        glDeleteShader(s);
+    if (src == NULL) {
+        fprintf(stderr, "Error: Shader source is NULL (%s)\n", dbgName);
         return 0;
     }
-    return s;
-}
 
-#ifdef DEBUG_ENABLED
-static int
-CheckProgram(GLuint prog, const char* name)
-{
+    // Compute length explicitly
+    GLsizei srclen = (GLsizei)strlen(src);
+    const GLchar* sources[] = { (const GLchar*)src };
+
+    GLuint shader = glCreateShader(stage);
+    glShaderSource(shader, 1, sources, &srclen);
+    glCompileShader(shader);
+
     GLint ok = 0;
-    glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
     if (!ok) {
         GLint len = 0;
-        glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
         if (len > 1) {
             char* log = (char*)malloc(len);
-            glGetProgramInfoLog(prog, len, NULL, log);
-            fprintf(stderr, "Program %s link error:\n%s\n", name, log);
+            glGetShaderInfoLog(shader, len, NULL, log);
+            fprintf(stderr, "Shader compilation error (%s):\n%s\n", dbgName, log);
             free(log);
+        } else {
+            fprintf(stderr, "Shader compilation failed (%s), but no log available.\n", dbgName);
         }
+        glDeleteShader(shader);
         return 0;
     }
-    return 1;
-}
-#endif
 
-/* ── public API ────────────────────────────────────────────────────── */
+    return shader;
+}
+
 ShaderHandle
 LoadShader(Arena* perm,
            const char* vsPath,
            const char* fsPath,
            ShaderType  type)
 {
-    ShaderHandle h;
+    ShaderHandle h;   // always start zeroed
     size_t len;
 
     char* vsSrc = ReadFileIntoArena(perm, vsPath, &len);
     char* fsSrc = ReadFileIntoArena(perm, fsPath, &len);
-    if (!vsSrc || !fsSrc) { return h; }
 
     GLuint vs = CompileShader(GL_VERTEX_SHADER,   vsSrc, vsPath);
     GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fsSrc, fsPath);
-    if (!vs || !fs) { return h; }
+    if (!vs || !fs) {
+        return h;
+    }
 
     GLuint prog = glCreateProgram();
     glAttachShader(prog, vs);
     glAttachShader(prog, fs);
-    glLinkProgram (prog);
+    glLinkProgram(prog);
+
     glDeleteShader(vs);
     glDeleteShader(fs);
 
-    #ifdef DEBUG_ENABLED
-        if (!CheckProgram(prog, fsPath)) { glDeleteProgram(prog); return h; }
-    #endif
+    GLint linkOK = 0;
+    glGetProgramiv(prog, GL_LINK_STATUS, &linkOK);
+    if (!linkOK) {
+        GLint len = 0;
+        glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
+        if (len > 1) {
+            char* log = (char*)malloc(len);
+            glGetProgramInfoLog(prog, len, NULL, log);
+            fprintf(stderr, "Shader link error (%s + %s):\n%s\n", vsPath, fsPath, log);
+            free(log);
+        }
+        glDeleteProgram(prog);
+        return h;
+    }
 
     h.program  = prog;
     h.type     = type;
