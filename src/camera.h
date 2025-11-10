@@ -1,6 +1,7 @@
 #ifndef CAMERA_H 
 #define CAMERA_H
 
+#include "allocator.h"
 #include "defines.h"
 
 struct Camera {
@@ -15,19 +16,19 @@ struct Camera {
     bool debug = false;
 };
 
-inline Camera createCamera()
+inline Camera* createCamera(Arena* arena)
 {
-    Camera cam{};
+    Camera *cam = PushStructZero(arena, Camera);
 
-    cam.position = vec3(0.0f, 0.0f, 3.0f);
-    cam.target   = vec3(0.0f, 0.0f, 0.0f);
+    cam->position = vec3(0.0f, 0.0f, 3.0f);
+    cam->target   = vec3(0.0f, 0.0f, 0.0f);
 
     const vec3 worldUp   = vec3(0.0f, 1.0f, 0.0f);           // must be non-zero
-    cam.direction        = (cam.position - cam.target).normalize();
-    cam.right            = (cross(worldUp, cam.direction)).normalize();
-    cam.up               = cross(cam.direction, cam.right);  // already unit-length
+    cam->direction        = (cam->position - cam->target).normalize();
+    cam->right            = (cross(worldUp, cam->direction)).normalize();
+    cam->up               = cross(cam->direction, cam->right);  // already unit-length
 
-    cam.view = mat4::lookAt(cam.position, cam.target, worldUp);
+    cam->view = mat4::lookAt(cam->position, cam->target, worldUp);
 
     return cam;  // returned by value (NRVO/RVO will elide copies)
 }

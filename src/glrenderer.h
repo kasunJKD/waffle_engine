@@ -12,6 +12,8 @@ struct GLRENDER {
 void gl_render_init(GLRENDER* gl_render);
 void gl_draw(Entity* entity, AssetManager* assets_manager, GLRENDER* gl_render);
 
+void draw_texture(vec3 position, GLuint texture, GLuint shader, GLuint VAO);
+
 #endif //GLRENDERER_H
 
 //RENDER_SYSTEM

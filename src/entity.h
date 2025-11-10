@@ -29,7 +29,7 @@ struct EntityManager {
     size_t count; //inuse amount
 };
 
-EntityManager create_entity_manager(size_t capacity, Arena* arena);
+EntityManager* create_entity_manager(size_t capacity, Arena* arena);
 
 size_t add_entity(EntityManager* manager);
 Entity* get_entity(EntityManager* manager, size_t id);

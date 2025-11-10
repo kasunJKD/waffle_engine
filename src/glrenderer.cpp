@@ -39,7 +39,7 @@ void gl_render_init(GLRENDER* gl_render)
     glBindVertexArray(0); 
 }
 
-
+//redundent code
 void gl_draw(Entity* entity, AssetManager* assets_manager, GLRENDER* gl_render)
 {
     Asset* test_asset = AssetManager_GetByName(assets_manager, "test_shader");
@@ -55,4 +55,13 @@ void gl_draw(Entity* entity, AssetManager* assets_manager, GLRENDER* gl_render)
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         };break;
     }
+}
+
+//TODO render in position need to add
+void draw_texture(vec3 position, GLuint texture, GLuint shader, GLuint VAO){
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUseProgram(shader);
+        glBindVertexArray(VAO); 
+            //glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }

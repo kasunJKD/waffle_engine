@@ -17,11 +17,11 @@ Entity* get_entity(EntityManager* manager, size_t id)
     return &manager->entities[id];
 }
 
-EntityManager create_entity_manager(size_t capacity, Arena* arena)
+EntityManager* create_entity_manager(size_t capacity, Arena* arena)
 {
-    EntityManager manager = {};
-    manager.count = 0;
-    manager.capacity = capacity;
-    manager.entities = PushArrayZero(arena, Entity, capacity);
+    EntityManager *manager = PushStruct(arena, EntityManager);
+    manager->count = 0;
+    manager->capacity = capacity;
+    manager->entities = PushArrayZero(arena, Entity, capacity);
     return manager;
 }
