@@ -1,52 +1,64 @@
-#pragma once
+#ifndef INPUT_S_H
+#define INPUT_S_H
 
 #include "window.h"
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-#include <glm/glm.hpp>
 
-enum KeyState {
-    NoState,
-    Pressed,
-    Held,
-    Released,
-    Scroll,
-    ScrollFlip
-};
+// Forward-declare Arena so we don't depend on allocator headers here.
+struct Arena;
 
-struct InputManager {
-    void init();
-    void update(bool& isRunning, Window *window);
+typedef enum KeyState {
+    KEYSTATE_NONE = 0,
+    KEYSTATE_PRESSED,
+    KEYSTATE_HELD,
+    KEYSTATE_RELEASED,
+    KEYSTATE_SCROLL,
+    KEYSTATE_SCROLL_FLIP
+} KeyState;
 
-    // glm::vec3 getMovementDirection() const;
-    //
-    // std::unordered_map<SDL_Keycode, glm::vec3> keyMappings;
-    // glm::vec3 movementDirection;
+// NOTE: We use SDL scancodes so we can index directly into an array.
+// SDL_NUM_SCANCODES is the max scancode count.
+#define INPUT_MAX_MOUSE_BUTTONS 8
 
-    void loadDefaultKeyMappings();
+typedef struct InputManager {
+    KeyState key_states[SDL_NUM_SCANCODES];
+    KeyState mouse_button_states[INPUT_MAX_MOUSE_BUTTONS];
 
-    // Key-related functions
-    bool isKeyPressed(SDL_Keycode key) const;
-    bool isKeyHeld(SDL_Keycode key) const;
-    bool isKeyReleased(SDL_Keycode key) const;
+    int mouse_x;
+    int mouse_y;
+    int mouse_wheel_y;
+} InputManager;
 
-    // Mouse-related functions
-    bool isMouseButtonPressed(Uint8 button) const;
-    bool isMouseButtonHeld(Uint8 button) const;
-    bool isMouseButtonReleased(Uint8 button) const;
-    bool isMouseButtonScrollFlip(Uint8 button) const;
-    bool isMouseWheelScroll(Uint8 button) const;
+// Creation / init
+InputManager* input_manager_create(struct Arena* arena);
+void input_manager_init(InputManager* im);
 
-    int getMouseX() const;
-    int getMouseY() const;
-    int getMouseWheelY() const;
+// Per-frame update (polls SDL events, updates states, mouse, etc.)
+void input_manager_update(InputManager* im, bool *is_running, Window* window);
 
-    // std::unordered_map<SDL_Keycode, KeyState> keyStates;
-    // std::unordered_map<Uint8, KeyState> mouseButtonStates;
-    int mouseX = 0, mouseY = 0;
-    int mouseWheelY = 0;
+// Key queries (use SDL_Scancode, e.g. SDL_SCANCODE_W)
+int input_is_key_pressed (const InputManager* im, SDL_Scancode scancode);
+int input_is_key_held    (const InputManager* im, SDL_Scancode scancode);
+int input_is_key_released(const InputManager* im, SDL_Scancode scancode);
 
-    void handleKeyEvent(const SDL_Event& event);
-    void handleMouseEvent(const SDL_Event& event);
-    void resetStates();
-};
+// Mouse button queries (1 = left, 2 = middle, 3 = right, etc.)
+int input_is_mouse_pressed     (const InputManager* im, Uint8 button);
+int input_is_mouse_held        (const InputManager* im, Uint8 button);
+int input_is_mouse_released    (const InputManager* im, Uint8 button);
+int input_is_mouse_scroll_flip (const InputManager* im, Uint8 button);
+int input_is_mouse_wheel_scroll(const InputManager* im);
+
+// Mouse / wheel getters
+int input_get_mouse_x(const InputManager* im);
+int input_get_mouse_y(const InputManager* im);
+int input_get_mouse_wheel_y(const InputManager* im);
+
+// Internal helpers (you can keep these in the .c if you want them private)
+void input_handle_key_event  (InputManager* im, const SDL_Event* event);
+void input_handle_mouse_event(InputManager* im, const SDL_Event* event);
+void input_reset_states      (InputManager* im);
+
+
+#endif // INPUT_S_H
+

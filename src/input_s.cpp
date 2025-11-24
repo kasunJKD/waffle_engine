@@ -1,120 +1,192 @@
 #include "input_s.h"
-#include <iostream>
+#include "allocator.h"  // for Arena, PushStructZero
 
-#ifdef DEBUG_ENABLED
-#include "backends/imgui_impl_sdl2.h"
-#endif
-void InputManager::init() {
-    // Initialize any input-related state if needed
-    //keyStates.clear();
-    //mouseButtonStates.clear();
-    mouseX = 0;
-    mouseY = 0;
-    
-    //int mouseWheelX = 0;
-    mouseWheelY = 0;
-
-    //movementDirection = glm::vec3(0.0f);
-    //loadDefaultKeyMappings();
+InputManager* input_manager_create(struct Arena* arena) {
+    InputManager* im = PushStructZero(arena, InputManager);
+    input_manager_init(im);
+    return im;
 }
 
-void InputManager::update(bool& isRunning, Window* window) {
-    //resetStates(); // Reset transitional states like Pressed and Released
+void input_manager_init(InputManager* im) {
+    if (!im) return;
 
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        #ifdef DEBUG_ENABLED    
-            ImGui_ImplSDL2_ProcessEvent(&event); // Forward your event to backend
-        #endif
-
-        switch (event.type) {
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-                //handleKeyEvent(event);
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-            case SDL_MOUSEBUTTONUP:
-                //handleMouseEvent(event);
-                break;
-            case SDL_MOUSEMOTION:
-                mouseX = event.motion.x;
-                mouseY = event.motion.y;
-                break;
-            case SDL_MOUSEWHEEL:
-                //handleMouseEvent(event);
-                break;
-            case SDL_WINDOWEVENT:
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED && window) {
-                    window->resize(event.window.data1, event.window.data2);
-                }
-                break;
-            case SDL_QUIT:
-                std::cout << "Quit event received." << std::endl;
-                isRunning = false;
-                break;
-            default:
-                break;
-       }
+    // Clear all states (already zeroed by PushStructZero, but for clarity)
+    for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+        im->key_states[i] = KEYSTATE_NONE;
+    }
+    for (int i = 0; i < INPUT_MAX_MOUSE_BUTTONS; ++i) {
+        im->mouse_button_states[i] = KEYSTATE_NONE;
     }
 
-    //movementDirection = glm::vec3(0.0f);
-
-    // const Uint8* state = SDL_GetKeyboardState(NULL);
-    // for (auto it = keyMappings.begin(); it != keyMappings.end(); ++it) {
-    //     SDL_Keycode key = it->first;
-    //     glm::vec3 direction = it->second;
-    //     if (state[SDL_GetScancodeFromKey(key)]) {
-    //         movementDirection += direction;
-    //     }
-    // }
+    im->mouse_x = 0;
+    im->mouse_y = 0;
+    im->mouse_wheel_y = 0;
 }
 
-// bool InputManager::isKeyPressed(SDL_Keycode key) const {
-//     auto it = keyStates.find(key);
-//     return it != keyStates.end() && it->second == KeyState::Pressed;
-// }
-//
-// bool InputManager::isKeyHeld(SDL_Keycode key) const {
-//     auto it = keyStates.find(key);
-//     return it != keyStates.end() && it->second == KeyState::Held;
-// }
-//
-// bool InputManager::isKeyReleased(SDL_Keycode key) const {
-//     auto it = keyStates.find(key);
-//     return it != keyStates.end() && it->second == KeyState::Released;
-// }
-//
-// bool InputManager::isMouseButtonPressed(Uint8 button) const {
-//     auto it = mouseButtonStates.find(button);
-//     return it != mouseButtonStates.end() && it->second == KeyState::Pressed;
-// }
-//
-// bool InputManager::isMouseButtonHeld(Uint8 button) const {
-//     auto it = mouseButtonStates.find(button);
-//     return it != mouseButtonStates.end() && it->second == KeyState::Held;
-// }
-//
-// bool InputManager::isMouseButtonReleased(Uint8 button) const {
-//     auto it = mouseButtonStates.find(button);
-//     return it != mouseButtonStates.end() && it->second == KeyState::Released;
-// }
-//
-// bool InputManager::isMouseWheelScroll(Uint8 button) const {
-//     auto it = mouseButtonStates.find(button);
-//     return it != mouseButtonStates.end() && it->second == KeyState::Scroll;
-// }
-//
-// bool InputManager::isMouseButtonScrollFlip(Uint8 button) const {
-//     auto it = mouseButtonStates.find(button);
-//     return it != mouseButtonStates.end() && it->second == KeyState::ScrollFlip;
-// }
-//
-int InputManager::getMouseX() const {
-    return mouseX;
+static void input_transition_key_states(InputManager* im) {
+    // Turn PRESSED -> HELD, RELEASED -> NONE for keys
+    for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+        KeyState s = im->key_states[i];
+        if (s == KEYSTATE_PRESSED) {
+            im->key_states[i] = KEYSTATE_HELD;
+        } else if (s == KEYSTATE_RELEASED) {
+            im->key_states[i] = KEYSTATE_NONE;
+        }
+    }
+
+    // Mouse buttons
+    for (int i = 0; i < INPUT_MAX_MOUSE_BUTTONS; ++i) {
+        KeyState s = im->mouse_button_states[i];
+        if (s == KEYSTATE_PRESSED) {
+            im->mouse_button_states[i] = KEYSTATE_HELD;
+        } else if (s == KEYSTATE_RELEASED) {
+            im->mouse_button_states[i] = KEYSTATE_NONE;
+        } else if (s == KEYSTATE_SCROLL || s == KEYSTATE_SCROLL_FLIP) {
+            // Scroll is per-frame: reset after use
+            im->mouse_button_states[i] = KEYSTATE_NONE;
+        }
+    }
+
+    // Wheel is per-frame
+    im->mouse_wheel_y = 0;
 }
 
-int InputManager::getMouseY() const {
-    return mouseY;
+void input_handle_key_event(InputManager* im, const SDL_Event* event) {
+    SDL_Scancode sc = event->key.keysym.scancode;
+    if (sc < 0 || sc >= SDL_NUM_SCANCODES) return;
+
+    if (event->type == SDL_KEYDOWN && !event->key.repeat) {
+        im->key_states[sc] = KEYSTATE_PRESSED;
+    } else if (event->type == SDL_KEYUP) {
+        im->key_states[sc] = KEYSTATE_RELEASED;
+    }
 }
 
+void input_handle_mouse_event(InputManager* im, const SDL_Event* event) {
+    switch (event->type) {
+    case SDL_MOUSEBUTTONDOWN: {
+        Uint8 btn = event->button.button;
+        if (btn < INPUT_MAX_MOUSE_BUTTONS) {
+            im->mouse_button_states[btn] = KEYSTATE_PRESSED;
+        }
+    } break;
 
+    case SDL_MOUSEBUTTONUP: {
+        Uint8 btn = event->button.button;
+        if (btn < INPUT_MAX_MOUSE_BUTTONS) {
+            im->mouse_button_states[btn] = KEYSTATE_RELEASED;
+        }
+    } break;
+
+    case SDL_MOUSEMOTION: {
+        im->mouse_x = event->motion.x;
+        im->mouse_y = event->motion.y;
+    } break;
+
+    case SDL_MOUSEWHEEL: {
+        im->mouse_wheel_y = event->wheel.y;
+        // If you want scroll as a state on some "virtual button", you can set it here.
+    } break;
+    }
+}
+
+void input_reset_states(InputManager* im) {
+    // Full reset if needed (not per-frame transition)
+    input_manager_init(im);
+}
+
+void input_manager_update(InputManager* im, bool *is_running, Window* window) {
+    (void)window; // if you don't need it here yet
+
+    // Step 1: transition last frame states
+    input_transition_key_states(im);
+
+    // Step 2: poll SDL events
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            *is_running = false;
+        }
+
+        switch (event.type) {
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
+            input_handle_key_event(im, &event);
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
+        case SDL_MOUSEMOTION:
+        case SDL_MOUSEWHEEL:
+            input_handle_mouse_event(im, &event);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+// ===== Query functions =====
+
+int input_is_key_pressed(const InputManager* im, SDL_Scancode sc) {
+    if (sc < 0 || sc >= SDL_NUM_SCANCODES) return 0;
+    return im->key_states[sc] == KEYSTATE_PRESSED;
+}
+
+int input_is_key_held(const InputManager* im, SDL_Scancode sc) {
+    if (sc < 0 || sc >= SDL_NUM_SCANCODES) return 0;
+    KeyState s = im->key_states[sc];
+    return s == KEYSTATE_HELD || s == KEYSTATE_PRESSED;
+}
+
+int input_is_key_released(const InputManager* im, SDL_Scancode sc) {
+    if (sc < 0 || sc >= SDL_NUM_SCANCODES) return 0;
+    return im->key_states[sc] == KEYSTATE_RELEASED;
+}
+
+static int mouse_index(Uint8 button) {
+    if (button >= INPUT_MAX_MOUSE_BUTTONS) return -1;
+    return (int)button;
+}
+
+int input_is_mouse_pressed(const InputManager* im, Uint8 button) {
+    int idx = mouse_index(button);
+    if (idx < 0) return 0;
+    return im->mouse_button_states[idx] == KEYSTATE_PRESSED;
+}
+
+int input_is_mouse_held(const InputManager* im, Uint8 button) {
+    int idx = mouse_index(button);
+    if (idx < 0) return 0;
+    KeyState s = im->mouse_button_states[idx];
+    return s == KEYSTATE_HELD || s == KEYSTATE_PRESSED;
+}
+
+int input_is_mouse_released(const InputManager* im, Uint8 button) {
+    int idx = mouse_index(button);
+    if (idx < 0) return 0;
+    return im->mouse_button_states[idx] == KEYSTATE_RELEASED;
+}
+
+// For now these are stubs – you can decide what Scroll/ScrollFlip means
+int input_is_mouse_scroll_flip(const InputManager* im, Uint8 button) {
+    (void)im; (void)button;
+    return 0;
+}
+
+int input_is_mouse_wheel_scroll(const InputManager* im) {
+    return im->mouse_wheel_y != 0;
+}
+
+int input_get_mouse_x(const InputManager* im) {
+    return im->mouse_x;
+}
+
+int input_get_mouse_y(const InputManager* im) {
+    return im->mouse_y;
+}
+
+int input_get_mouse_wheel_y(const InputManager* im) {
+    return im->mouse_wheel_y;
+}

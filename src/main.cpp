@@ -1,3 +1,5 @@
+//TODO -> Camera + Math
+
 #include <cstdint>
 
 #include "allocator.h"
@@ -21,7 +23,7 @@
 const uint32_t TARGET_FPS = 60;
 const uint32_t FRAME_DELAY = 1000 / TARGET_FPS; 
 
-constexpr uint64_t ARENA_MEMORY_MB = 20;
+constexpr uint64_t ARENA_MEMORY_MB = 100;
 constexpr uint64_t ARENA_MEMORY_MB_ASSETS = 50;
 constexpr uint64_t ARENA_MEMORY_MB_SCRATCH = 5;
 
@@ -57,6 +59,7 @@ struct State {
 State state_instance = {};
 State* state = &state_instance;
 
+//creating and loading entities and scene need to happen in config load
 void test_create_entities(EntityManager* e_manager){
     size_t entity_id = add_entity(e_manager);
     Entity* entity = get_entity(e_manager, entity_id);
@@ -95,10 +98,6 @@ void init() {
     add_texture(asset_manager, "D:\\Personal\\waffle_engine\\assets\\container.jpg", "image_container", TEST_TEXTURE);
     state->asset_manager = asset_manager;
 
-    InputManager* inputManager = PushStructZero(state->arena, InputManager);
-    state->inputManager = inputManager;
-    state->inputManager->init();
-
     state->camera = createCamera(state->arena);
     state->entity_manager = create_entity_manager(100, arena);
 
@@ -118,6 +117,9 @@ void init() {
     Editor* editor = PushStruct(state->arena, Editor);
     state->editor = editor;
     Editor::activate_editor(state->editor);
+    
+    state->inputManager = input_manager_create(state->arena);
+    input_manager_init(state->inputManager);
     
     state->isRunning = true;
 
@@ -183,7 +185,8 @@ void update_game() {
             }
         #endif
 
-
+        //simulate_game();
+        
         update_entities(state);
 
         //buid_draw_commeads() will process rendererqueue
@@ -195,7 +198,7 @@ void update_game() {
 }
 
 void process_input() {
-        state->inputManager->update(state->isRunning, state->window);
+        input_manager_update(state->inputManager, &state->isRunning, state->window);
 }
 
 void deinit(){
@@ -217,70 +220,3 @@ int main() {
     return 0;
 }
 
-// 🧱 Step-by-Step Breakdown
-// 1️⃣ process_input()
-//
-// Purpose: Capture player intent, store key states, update movement inputs.
-//
-// Item	Arena	Reason
-// InputManager struct	Permanent	Input system exists for entire game session
-// Input states (keys, mouse, gamepad)	Permanent	Persist frame to frame
-// Temp event queue	Transient (optional)	Reset each frame after processing
-//
-// ✅ Use: Permanent (for manager) + optional transient (for per-frame event list)
-//
-// 2️⃣ update_physics_and_collisions()
-//
-// Purpose: Move bodies, detect and resolve collisions.
-//
-// Item	Arena	Reason
-// Entities & physics bodies	World	Persist with current level
-// Collision pairs / contact data	Transient	Recomputed every frame
-// Debug draw rectangles / lines	Transient	Draw once, cleared each frame
-//
-// ✅ Use: World + Transient
-// → Entities live in world memory; collision work lists in transient memory.
-//
-// 3️⃣ update_entities()
-//
-// Purpose: Run game logic, AI, triggers, animations, etc.
-//
-// Item	Arena	Reason
-// Entities	World	Same objects persist across frames
-// Temporary script data / targets / lists	Transient	Created + destroyed per frame
-// Created projectiles / spawned entities	World	Should persist until deleted manually
-//
-// ✅ Use: World + Transient
-// → Logic manipulates world data, uses transient for temporary lookups or lists.
-//
-// 4️⃣ build_draw_commands()
-//
-// Purpose: Convert entity/world state into a renderable command list.
-//
-// Item	Arena	Reason
-// Visible entity list	Transient	Built each frame
-// RenderCommand buffer	Transient	Reset each frame
-// Sorting / batching arrays	Scratch	Temporary during sorting only
-//
-// ✅ Use: Transient (for commands) + Scratch (inside sorting)
-// → These get reset each frame after rendering.
-//
-// 5️⃣ render_frame()
-//
-// Purpose: Execute draw commands → FBO → screen.
-//
-// Item	Arena	Reason
-// RenderSystem struct	Permanent	Persistent renderer system
-// Framebuffer / shaders / pipelines	Permanent	Created once at init
-// Draw commands	Transient	Built this frame only
-// Post-process temp buffers	Transient	Reused each frame
-//
-// ✅ Use: Permanent (for systems) + Transient (for per-frame data)
-//
-// 🧠 Summary Table
-// Step	Primary Arena	Secondary Arena(s)	Why
-// process_input()	Permanent	Transient (for events)	Input system persists
-// update_physics_and_collisions()	World	Transient	Entities in world; collision pairs temporary
-// update_entities()	World	Transient	Game logic affects persistent entities
-// build_draw_commands()	Transient	Scratch	Commands + sorting are frame-based
-// render_frame()	Permanent	Transient	Renderer is global; command list temporary

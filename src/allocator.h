@@ -36,6 +36,21 @@ inline Arena* ArenaAlloc(uint8_t size) {
     return a;
 }
 
+inline Arena* ArenaAlloc(size_t sizeBytes) {
+    const size_t headerSize = sizeof(Arena);
+    const size_t totalSize  = headerSize + sizeBytes;
+
+    uint8_t* block = (uint8_t*)os_reserve_memory(totalSize);
+    assert(block && "OS failed to reserve memory");
+
+    Arena* a = (Arena*)block;
+    a->base      = block + headerSize;
+    a->capacity  = sizeBytes;
+    a->current_pos = 0;
+
+    return a;
+}
+
 #define MiB(x) ((size_t)(x) * 1024ULL * 1024ULL)
 inline Arena* ArenaAllocateMB(uint64_t sizemb) {
     return ArenaAlloc(MiB(sizemb));
