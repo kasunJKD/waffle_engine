@@ -1,19 +1,13 @@
-//TODO -> Camera + Math
+//TODO - camera move 
+// middle point position to be mid of the texture
+// editor input and debug camera
 
 #include <cstdint>
 
-#include "allocator.h"
-#include "assetsManager.h"
-#include "camera.h"
-#include "editor.h"
-#include "entity.h"
-#include "glrenderer.h"
-#include "input_s.h"
-#include "renderer.h"
+#include "defines.h"
 #include "shader.h"
-#include "texture.h"
-#include "window.h"
 #include "debug.h"
+#include "globals.h"
 
 #define MAX_ENTITIES 100
 
@@ -36,28 +30,8 @@ float calculateDeltaTime() {
     return deltaTime;
 }
 
-struct State {
-    Window* window; 
-    InputManager* inputManager;
-    Camera* camera;
-    AssetManager* asset_manager; //keep assets manager in a seperate arena and store a pointer to it
-    EntityManager* entity_manager;
-    RenderSystem* render_system;
-    GLRENDER* gl_renderer;
-    Arena* arena;
-    Arena* scratch_buffer;
-    Arena* asset_arena;
-
-    #ifdef DEBUG_ENABLED
-    Editor* editor;
-    #endif
-    
-    bool isRunning;
-    bool isDebug;
-};
-
 State state_instance = {};
-State* state = &state_instance;
+State *state = &state_instance;
 
 //creating and loading entities and scene need to happen in config load
 void test_create_entities(EntityManager* e_manager){
@@ -65,7 +39,7 @@ void test_create_entities(EntityManager* e_manager){
     Entity* entity = get_entity(e_manager, entity_id);
     entity->flag = F_RENDER;
     entity->type = T_TEST;
-    entity->position = vec3(0.0f, 0.0f, 0.0f);
+    entity->position = vec3(300.0f, 200.0f, 0.0f);
     entity->active = true;
 }
 
@@ -124,6 +98,16 @@ void init() {
     state->isRunning = true;
 
     test_create_entities(state->entity_manager);
+
+    Asset* shader = AssetManager_GetByName(asset_manager, "test_shader");
+    glUseProgram(shader->shader.program);
+    GLint projLocation = glGetUniformLocation(shader->shader.program, "projection");
+    mat4 projection = mat4::ortho(
+        0.0f, SCREENSIZE_WIDTH,
+        SCREENSIZE_HEIGTH, 0.0f,
+        -10.0f, 10.0f
+    );
+    glUniformMatrix4fv(projLocation, 1, GL_FALSE, projection.data());
 }
 
 
@@ -133,7 +117,7 @@ void update_entities(State *state) {
         if(entity.flag & F_RENDER && entity.type == T_TEST) {
             Asset* test_asset = AssetManager_GetByName(state->asset_manager, "test_shader");
             Asset* test_texture = AssetManager_GetByName(state->asset_manager, "image_container");
-            push_texture_command(state->render_system, entity.id, vec3(0.0,0.0,0.0), test_asset->shader.program, test_texture->texture.texture, state->gl_renderer->VAO);
+            push_texture_command(state->render_system, entity.id, entity.position, test_asset->shader.program, test_texture->texture.texture, state->gl_renderer->VAO);
         }
 
     }

@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cmath>
+
 struct vec3 {
     float x,y,z;
 
@@ -68,7 +69,7 @@ struct mat4 {
     }
 
     constexpr const float* data() const noexcept { return m.data(); }
-          float* data()       noexcept { return m.data(); }
+    constexpr       float* data()       noexcept { return m.data(); }
 
     /* look-at factory (right-handed, OpenGL) */
     static mat4 lookAt(const vec3& eye,
@@ -85,14 +86,63 @@ struct mat4 {
         /* second column (u) */
         M.m[4]  =  u.x;  M.m[5]  =  u.y;  M.m[6]  =  u.z;  M.m[7]  = 0.f;
         /* third column (−f) */
-        M.m[8]  = -f.x;  M.m[9]  = -f.y;  M.m[10] = -f.z;  M.m[11] = 0.f;
+        M.m[8]  = f.x;  M.m[9]  = f.y;  M.m[10] = f.z;  M.m[11] = 0.f;
         /* translation column */
-        M.m[12] = - (s.x*eye.x + s.y*eye.y + s.z*eye.z);
-        M.m[13] = - (u.x*eye.x + u.y*eye.y + u.z*eye.z);
-        M.m[14] =    f.x*eye.x + f.y*eye.y + f.z*eye.z;
+        M.m[12] = -(s.x*eye.x + s.y*eye.y + s.z*eye.z);
+        M.m[13] = -(u.x*eye.x + u.y*eye.y + u.z*eye.z);
+        M.m[14] =   -(f.x*eye.x + f.y*eye.y + f.z*eye.z);
         M.m[15] = 1.f;
         return M;
     }
+
+    static mat4 translate(const vec3& t) {
+        mat4 result = mat4();
+
+        result.m[12] = t.x;
+        result.m[13] = t.y;
+        result.m[14] = t.z;
+
+        return result;
+    }
+
+    static mat4 ortho(float left, float right, float bottom, float top, float n, float f)
+    {
+        mat4 M = {};
+
+        M.m[0]  = 2.0f / (right - left);
+        M.m[5]  = 2.0f / (top - bottom);
+        M.m[10] = -2.0f / (f - n);
+
+        M.m[12] = -(right + left) / (right - left);
+        M.m[13] = -(top + bottom) / (top - bottom);
+        M.m[14] = -(f + n)  / (f - n);
+
+        M.m[15] = 1.0f;
+
+        return M;
+    }
+    static mat4 scale(const vec3& s) {
+        mat4 M = mat4();     // identity
+
+        M.m[0]  = s.x;       // scale X
+        M.m[5]  = s.y;       // scale Y
+        M.m[10] = s.z;       // scale Z
+
+        return M;
+    }
+mat4 operator*(const mat4& b) const {
+    mat4 result{};
+    for (int col = 0; col < 4; col++) {
+        for (int row = 0; row < 4; row++) {
+            result.m[col*4 + row] =
+                m[0*4 + row] * b.m[col*4 + 0] +
+                m[1*4 + row] * b.m[col*4 + 1] +
+                m[2*4 + row] * b.m[col*4 + 2] +
+                m[3*4 + row] * b.m[col*4 + 3];
+        }
+    }
+    return result;
+}
 };
 
 struct ivec3 {

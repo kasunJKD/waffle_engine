@@ -24,7 +24,7 @@ inline Camera* createCamera(Arena* arena)
     cam->target   = vec3(0.0f, 0.0f, 0.0f);
 
     const vec3 worldUp   = vec3(0.0f, 1.0f, 0.0f);           // must be non-zero
-    cam->direction        = (cam->position - cam->target).normalize();
+    cam->direction        = (cam->target - cam->position).normalize();
     cam->right            = (cross(worldUp, cam->direction)).normalize();
     cam->up               = cross(cam->direction, cam->right);  // already unit-length
 
@@ -32,5 +32,7 @@ inline Camera* createCamera(Arena* arena)
 
     return cam;  // returned by value (NRVO/RVO will elide copies)
 }
+
+Camera* getCamera();
 
 #endif

@@ -1,14 +1,16 @@
 #include "glrenderer.h"
+#include "assetsManager.h"
+#include "camera.h"
 
 void gl_render_init(GLRENDER* gl_render)
 {
     
     float vertices[] = {
         // positions          // colors           // texture coords
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+         1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
     };
     
     unsigned int indices[] = {  
@@ -37,6 +39,8 @@ void gl_render_init(GLRENDER* gl_render)
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     
     glBindVertexArray(0); 
+
+
 }
 
 //redundent code
@@ -59,9 +63,21 @@ void gl_draw(Entity* entity, AssetManager* assets_manager, GLRENDER* gl_render)
 
 //TODO render in position need to add
 void draw_texture(vec3 position, GLuint texture, GLuint shader, GLuint VAO){
+
+        Camera* cam = getCamera();
+        
         glBindTexture(GL_TEXTURE_2D, texture);
         glUseProgram(shader);
         glBindVertexArray(VAO); 
-            //glDrawArrays(GL_TRIANGLES, 0, 3);
+        
+
+        GLint viewLocation = glGetUniformLocation(shader, "view");
+        GLint modelLocation = glGetUniformLocation(shader, "model");
+        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, cam->view.data());
+        mat4 model = mat4::translate(position);
+        mat4 S = mat4::scale(vec3{200.0f, 200.0f, 1.0f});
+        model = model * S;
+        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, model.data());
+    
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
