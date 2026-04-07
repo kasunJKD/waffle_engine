@@ -1,5 +1,8 @@
-#include <iostream>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include "game.h"
 #include "utils.h"
+#include <cstdio>
 #include "platform.h"
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -11,6 +14,14 @@ global_variable SDL_Offscreen_Buffer GlobalBackbuffer = {};
 global_variable SDL_Window *GlobalWindow = 0;
 global_variable SDL_GLContext GlobalGLContext = 0;
 global_variable opengl_state GlobalOpenGL = {};
+
+struct win32_game_code
+{
+    void* GameCodeDLL;
+    game_update_and_render *UpdateAndRender;
+
+    bool32 IsValid;
+};
 
 internal void
 SDLFatal(const char *Label)
@@ -276,6 +287,61 @@ SDLDisplayBufferInWindow(SDL_Offscreen_Buffer *Buffer, int WindowWidth, int Wind
     SDL_GL_SwapWindow(GlobalWindow);
 }
 
+void* PlatformAllocateMemory(size_t size)
+{
+#if _WIN32
+    return VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+#else
+    return mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
+}
+
+void PlatformFreeMemory(void* memory, size_t size)
+{
+#if _WIN32
+    VirtualFree(memory, 0, MEM_RELEASE);
+#else
+    munmap(memory, size);
+#endif
+}
+
+internal win32_game_code 
+Win32LoadGameDLL()
+{
+    win32_game_code Result = {};
+
+    CopyFile("game.dll", "game_temp.dll", FALSE);
+    Result.GameCodeDLL = SDL_LoadObject("game_temp.dll");
+
+    if (Result.GameCodeDLL)
+    {
+        Result.UpdateAndRender = (game_update_and_render *) 
+            SDL_LoadFunction(Result.GameCodeDLL, "GameUpdateAndRender");
+
+        Result.IsValid = true;
+    }
+
+    if (!Result.IsValid)
+    {
+        Result.UpdateAndRender = GameUpdateAndRenderStub;
+    }
+
+    return Result;
+}
+
+internal void
+Win32UnloadGameCode(win32_game_code *GameCode)
+{
+    if(GameCode->GameCodeDLL)
+    {
+        SDL_UnloadObject(GameCode->GameCodeDLL);
+        GameCode->GameCodeDLL = 0;
+    }
+
+    GameCode->IsValid = false;
+    GameCode->UpdateAndRender = GameUpdateAndRenderStub;
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -311,40 +377,40 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    GlobalRunning = true;
+    Game_Memory game_memory = {};
+    game_memory.PermanentStorageSize = Mbytes(64);
+    game_memory.TransientStorageSize = Gbytes(1);
     
-    while (GlobalRunning)
+    u64 total_size = game_memory.PermanentStorageSize + game_memory.TransientStorageSize;
+
+    game_memory.PermanentStorage = PlatformAllocateMemory(total_size);
+    game_memory.TransientStorage = (u8 *)game_memory.PermanentStorage + game_memory.PermanentStorageSize;
+
+    if (game_memory.TransientStorage && game_memory.PermanentStorage)
     {
-	if(!GlobalPause)
-	{
-	    Game_OffScreen_Buffer Buffer = {};
-            Buffer.Memory = GlobalBackbuffer.Memory;
-            Buffer.Width = GlobalBackbuffer.Width;
-            Buffer.Height = GlobalBackbuffer.Height;
-            Buffer.Pitch = GlobalBackbuffer.Pitch;
+        game_memory.IsInitialised = true;
 
-	    static int BlueOffset = 0;
-            static int GreenOffset = 0;
-            ++BlueOffset;
-            GreenOffset += 2;
+        win32_game_code Game = Win32LoadGameDLL();
 
-            u8 *Row = (u8 *)Buffer.Memory;
-            for(int Y = 0; Y < Buffer.Height; ++Y)
+        GlobalRunning = true;
+        
+        while (GlobalRunning)
+        {
+            if(!GlobalPause)
             {
-                u32 *Pixel = (u32 *)Row;
-                for(int X = 0; X < Buffer.Width; ++X)
-                {
-                    u8 Blue = (u8)(X + BlueOffset);
-                    u8 Green = (u8)(Y + GreenOffset);
-                    *Pixel++ = ((Green << 8) | Blue);
-                }
-                Row += Buffer.Pitch;
+                Game_OffScreen_Buffer Buffer = {};
+                Buffer.Memory = GlobalBackbuffer.Memory;
+                Buffer.Width = GlobalBackbuffer.Width;
+                Buffer.Height = GlobalBackbuffer.Height;
+                Buffer.Pitch = GlobalBackbuffer.Pitch;
+
+                Game.UpdateAndRender(&Buffer, &game_memory);
+
+                SDL_Window Dimension = SDLGetWindowDimension(GlobalWindow);
+                SDLDisplayBufferInWindow(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
             }
 
-            SDL_Window Dimension = SDLGetWindowDimension(GlobalWindow);
-            SDLDisplayBufferInWindow(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
-	}
-
+        }
     }
 
 

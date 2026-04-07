@@ -68,6 +68,7 @@ cl -MT -nologo -W0 ^
        "%IMGUI_DIR%\backends\imgui_impl_opengl3.cpp"
 
 REM --- Compile your app and link everything ---
+cl %CommonCompilerFlags% %ROOT%\src\game.cpp -Fmgame.map /LD /link /EXPORT:GameUpdateAndRender
 cl %CommonCompilerFlags% %ROOT%src\platform.cpp ^
     glad.obj ^
     imgui.obj imgui_draw.obj imgui_tables.obj imgui_widgets.obj ^

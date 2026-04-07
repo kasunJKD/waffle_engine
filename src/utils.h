@@ -19,6 +19,9 @@ typedef i8 bool8;
 typedef float real32;
 typedef double real64;
 
+#define true 1
+#define false 0
+
 #define internal static
 #define global_variable static
 #define persist static
